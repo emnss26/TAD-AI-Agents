@@ -1,0 +1,6 @@
+flask
+pyyaml
+transformers
+bitsandbytes
+torch
+spacy

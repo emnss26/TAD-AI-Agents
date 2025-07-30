@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+torch
+transformers
+accelerate
+bitsandbytes
+peft
+pydantic
+requests
+python-dotenv
+uvicorn

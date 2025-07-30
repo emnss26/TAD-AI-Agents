@@ -1,0 +1,9 @@
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\bin\Debug\Revit_Api_Extractor.dll
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\bin\Debug\Revit_Api_Extractor.pdb
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\bin\Debug\Newtonsoft.Json.dll
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\bin\Debug\Newtonsoft.Json.xml
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\obj\Debug\Revit_Api_Extractor.csproj.AssemblyReference.cache
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\obj\Debug\Revit_Api_Extractor.csproj.CoreCompileInputs.cache
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\obj\Debug\Revit_Ap.8BE27F8A.Up2Date
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\obj\Debug\Revit_Api_Extractor.dll
+C:\Users\enriq\OneDrive\Escritorio\TAD-AI-Agents\agent-revit-plugin\Revit_Api_Extractor\Revit_Api_Extractor\obj\Debug\Revit_Api_Extractor.pdb

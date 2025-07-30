@@ -1,0 +1,20 @@
+# Python venv
+.venv/
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/
+
+# Revit SDK y archivos demasiado largos
+Revit-Agent/agent-revit-repos/
+*.docx
+*.pdf
+
+# Otros binarios/librerías temporales
+*.log
+*.sqlite3
+*.db
+
+Revit-Agent/agent-revit-repos/
+Revit-Agent/agent-revit-rm/

@@ -1,0 +1,23 @@
+from flask import Flask, request, jsonify
+from utils.load_catalog import load_catalog
+from nlu.intent_classifier import classify_intent
+from nlu.slot_filler import extract_slots
+from prompt_builder import build_request
+from utils.add_helpers import execute_in_revit
+import transformers
+
+app = Flask(__name__)
+catalog, reflection = load_catalog()
+model = transformers.AutoModelForCausalLM.from_pretrained("…phi‑2…")
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    user_text = request.json["text"]
+    intent = classify_intent(user_text)
+    slots  = extract_slots(user_text, intent)
+    req_json = build_request(intent, slots, catalog)
+    # 1) enviar req_json a phi‑2 → code
+    code = call_llm(model, req_json)
+    # 2) compilar y ejecutar en Revit
+    result = execute_in_revit(code, slots)
+    return jsonify({"code": code, "result": result})

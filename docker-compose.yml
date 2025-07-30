@@ -1,0 +1,37 @@
+services:
+  revit-code:
+    build:
+      context: .
+      dockerfile: Revit-Agent/agent-revit-coder/Dockerfile
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0,1
+    volumes:
+      - ./Revit-Agent/agent-revit-coder:/app:delegated
+    working_dir: /app
+    command: bash -lc "conda activate ai && python main.py"
+    ports:
+      - "8001:8000"
+
+  revit-orch:
+    build:
+      context: .
+      dockerfile: Revit-Agent/agent-revit-orchestrator/Dockerfile
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0,1
+    volumes:
+      - ./Revit-Agent/agent-revit-orchestrator:/app:delegated
+    working_dir: /app
+    command: bash -lc "conda activate ai && python orchestrator.py"
+    ports:
+      - "5001:5000"
+
+  # Similar services para Navisworks y AutoCAD...
+
+  shared:
+    image: busybox
+    volumes:
+      - ./Shared-Libs:/shared-libs:ro
+      - ./environment-ai.yml:/environment-ai.yml:ro
+    command: ["true"]

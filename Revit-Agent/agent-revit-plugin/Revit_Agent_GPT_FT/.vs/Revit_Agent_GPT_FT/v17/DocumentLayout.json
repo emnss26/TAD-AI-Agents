@@ -1,0 +1,87 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{206B5EAB-E3EC-4598-A73B-885BB2C3C44A}|Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT.csproj|c:\\users\\enriq\\onedrive\\escritorio\\tad-ai-agents\\agent-revit-plugin\\revit_agent_gpt_ft\\revit_agent_gpt_ft\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{206B5EAB-E3EC-4598-A73B-885BB2C3C44A}|Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT.csproj|solutionrelative:revit_agent_gpt_ft\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{206B5EAB-E3EC-4598-A73B-885BB2C3C44A}|Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT.csproj|c:\\users\\enriq\\onedrive\\escritorio\\tad-ai-agents\\agent-revit-plugin\\revit_agent_gpt_ft\\revit_agent_gpt_ft\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{206B5EAB-E3EC-4598-A73B-885BB2C3C44A}|Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT.csproj|solutionrelative:revit_agent_gpt_ft\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{206B5EAB-E3EC-4598-A73B-885BB2C3C44A}|Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT.csproj|c:\\users\\enriq\\onedrive\\escritorio\\tad-ai-agents\\agent-revit-plugin\\revit_agent_gpt_ft\\revit_agent_gpt_ft\\code_executor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{206B5EAB-E3EC-4598-A73B-885BB2C3C44A}|Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT.csproj|solutionrelative:revit_agent_gpt_ft\\code_executor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{206B5EAB-E3EC-4598-A73B-885BB2C3C44A}|Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT.csproj|c:\\users\\enriq\\onedrive\\escritorio\\tad-ai-agents\\agent-revit-plugin\\revit_agent_gpt_ft\\revit_agent_gpt_ft\\command.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{206B5EAB-E3EC-4598-A73B-885BB2C3C44A}|Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT.csproj|solutionrelative:revit_agent_gpt_ft\\command.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Code_Executor.cs",
+              "DocumentMoniker": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT\\Code_Executor.cs",
+              "RelativeDocumentMoniker": "Revit_Agent_GPT_FT\\Code_Executor.cs",
+              "ToolTip": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT\\Code_Executor.cs",
+              "RelativeToolTip": "Revit_Agent_GPT_FT\\Code_Executor.cs",
+              "ViewState": "AQIAAD0AAAAAAAAAAAAgwGIAAAARAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-16T18:37:26.338Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Form1.cs",
+              "DocumentMoniker": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT\\Form1.cs",
+              "RelativeDocumentMoniker": "Revit_Agent_GPT_FT\\Form1.cs",
+              "ToolTip": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT\\Form1.cs",
+              "RelativeToolTip": "Revit_Agent_GPT_FT\\Form1.cs",
+              "ViewState": "AQIAAHUAAAAAAAAAAAAgwIAAAAApAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-16T18:22:41.191Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Form1.cs [Dise\u00F1o]",
+              "DocumentMoniker": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT\\Form1.cs",
+              "RelativeDocumentMoniker": "Revit_Agent_GPT_FT\\Form1.cs",
+              "ToolTip": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT\\Form1.cs [Dise\u00F1o]",
+              "RelativeToolTip": "Revit_Agent_GPT_FT\\Form1.cs [Dise\u00F1o]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-16T18:16:08.861Z",
+              "EditorCaption": " [Dise\u00F1o]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Command.cs",
+              "DocumentMoniker": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT\\Command.cs",
+              "RelativeDocumentMoniker": "Revit_Agent_GPT_FT\\Command.cs",
+              "ToolTip": "C:\\Users\\enriq\\OneDrive\\Escritorio\\TAD-AI-Agents\\agent-revit-plugin\\Revit_Agent_GPT_FT\\Revit_Agent_GPT_FT\\Command.cs",
+              "RelativeToolTip": "Revit_Agent_GPT_FT\\Command.cs",
+              "ViewState": "AQIAAAQAAAAAAAAAAAAAACgAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-16T16:51:53.426Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

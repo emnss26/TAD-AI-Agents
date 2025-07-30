@@ -1,0 +1,12 @@
+name: ai
+
+channels:
+  - conda-forge
+  - nvidia
+  - defaults
+
+dependencies:
+  # Tu código necesita Python 3.12, así que lo especificamos aquí.
+  - python=3.12
+  - pip
+  # Cualquier otra dependencia de CONDA que necesites (ej. numpy)

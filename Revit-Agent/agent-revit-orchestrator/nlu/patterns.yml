@@ -1,0 +1,62 @@
+# ===================================================================
+# Archivo de patrones para la NLU del Agente de Revit
+# Cada slot DEBE estar en una sola línea.
+# ===================================================================
+
+slots:
+  # --- 1. Dimensiones y Cantidades ---
+  dimension_length: '\b(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|''|"|in|pulgada[s]?)\s*(?:de\s*)?(?:largo|longitud)\b'
+  dimension_height: '\b(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|''|"|in|pulgada[s]?)\s*(?:de\s*)?(?:alto|altura)\b'
+  dimension_width: '\b(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|''|"|in|pulgada[s]?)\s*(?:de\s*)?(?:ancho|anchura)\b'
+  dimension_thickness: '\b(?:espesor|grosor)\s*(?:de)?\s*(\d+(?:\.\d+)?)\s*(cm|mm|m|metros?|ft|pie[s]?|''|"|in|pulgada[s]?)\b'
+  dimension_diameter: '\b(?:diámetro|diametro)\s*(?:de)?\s*(\d+(?:\.\d+)?)\s*(mm|cm|m|metros?|ft|pie[s]?|''|"|in|pulgada[s]?)\b'
+  dimension_spacing: '\b(?:separados|separación\s*de|espaciados)\s*(\d+(?:\.\d+)?)\s*(m|metros?|ft|pie[s]?|'')\b'
+  dimension_offset: '\b(?:desfase|offset)\s*(?:de)?\s*(-?\d+(?:\.\d+)?)\s*(m|metros?|cm|mm|ft|pie[s]?|''|"|in|pulgada[s]?)\b'
+  dimension_compound: '\b(\d+(?:\.\d+)?)\s*(?:x|×|por)\s*(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|'')?\b'
+  dimension_generic_with_unit: '\b(\d+(?:\.\d+)?)\s*(m|metros?|cm|mm|ft|pie[s]?|''|"|in|pulgada[s]?)\b'
+  quantity: '\b(crea|genera|dibuja|coloca)\s*(\d+)\s*(ejes?|muros?|columnas?|vigas?|niveles?|planos?|worksets?)\b'
+  angle_degrees: '\b(-?\d+(?:\.\d+)?)\s*(?:°|grados)\b'
+
+  # --- 2. Identificadores y Nombres ---
+  element_category: '\b(muros?|paredes?|puertas?|ventanas?|pilares?|columnas?|suelos?|pisos?|techos?|cubiertas?|vigas?|ejes?|rejillas?|tuberías?|ductos?|mobiliario|barandales?|cimentaciones?|losas?|planos?|hojas?|familias?|tablas?|vínculos?|líneas?|habitaciones?|cuartos?|espacios?|worksets?)\b'
+  level_name: '\b(?:en\s*el|del)?\s*(?:nivel|planta)\s*[''"]?([a-zA-Z0-9\s_\.\-]+)[''"]?\b'
+  view_name: '\b(?:en\s*la\s*)?vista\s*[''"]([^''"]+)[''"]\b'
+  family_type: '\b(?:del\s*tipo|tipo|familia)\s*[''"]([^''"]+)[''"]\b'
+  material_name: '\b(?:material|con\s*el\s*color|con)\s*[''"]([^''"]+)[''"]\b'
+  color_name: '\b(roj[oa]|azul|verde|amarill[oa]|blanc[oa]|negr[oa])\b'
+  parameter_name: '\b(?:el\s*parámetro|parámetro|la\s*propiedad|propiedad)\s*[''"]([^''"]+)[''"]\b'
+  parameter_value: '\b(?:a|sea|es|con\s*valor\s*de|igual\s*a)\s+([''"]?[^''"]+[''"]?)\b'
+  new_name_definition: '\b(?:llamado|nómbralo|con\s*el\s*nombre|nombre)\s*[''"]([^''"]+)[''"]\b'
+  name_prefix: '\b(?:prefijo|que\s*empiecen\s*con)\s*[''"]([^''"]+)[''"]\b'
+  name_suffix: '\b(?:sufijo|que\s*terminen\s*con)\s*[''"]([^''"]+)[''"]\b'
+  axis_identifier: '\beje[s]?\s*([A-Z0-9\.]+)\b'
+  file_path: '([a-zA-Z]:\\[\\\S|*\S]?.*?\.(rfa|dwg|rvt|ifc|csv|nwc|txt))'
+
+  # --- 3. Ubicación y Geometría ---
+  coordinates_xy: '\b(?:en|a|en\s*la\s*posición|en\s*las\s*coordenadas)\s*\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?\b|\bX\s*=\s*(-?\d+(?:\.\d+)?)\s*,\s*Y\s*=\s*(-?\d+(?:\.\d+)?)\b'
+  coordinates_xyz: '\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?'
+  orientation: '\b(horizontales?|verticales?|norte|sur|este|oeste|horizontal|vertical|longitudinal)\b'
+
+  # --- 4. Atributos, Contexto y Selección ---
+  structural_usage: '\b(estructural(?:es)?|de\s*carga|de\s*corte|combinado)\b'
+  action_on_selection: '\b(seleccionad[oa]s?|por\s*el\s*usuario|que\s*seleccione|elemento\s*dado)\b'
+  active_context: '\b(vista\s*activa|modelo\s*actual|proyecto\s*actual|documento\s*actual)\b'
+  all_elements: '\b(tod[oa]s?\s*l[oa]s?)\b'
+  target_host: '\b(en\s*un\s*muro|en\s*una\s*pared|en\s*una\s*losa|en\s*un\s*suelo|en\s*una\s*escalera)\b'
+  file_format: '\b(NWC|IFC|CSV|PDF|DWG|SAT)\b'
+
+intents:
+  CreateWall:
+    patterns:
+      - '\b(muro|wall|pared)\b'
+      - '\b(entre)\b.*\beje[s]?\b'
+  QueryLevels:
+    patterns:
+      - '\bnivel(es)?\b'
+      - '\b(niveles?)\b'
+  # Puedes añadir más intenciones aquí siguiendo el mismo formato.
+  # Ejemplo:
+  # CreateLevel:
+  #   patterns:
+  #     - 'crea un nivel'
+  #     - 'añade una planta'

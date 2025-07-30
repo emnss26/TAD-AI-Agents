@@ -1,0 +1,6 @@
+{
+  // desactiva el warning de importaciones faltantes
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none"
+  }
+}
