@@ -2,19 +2,21 @@ import os
 import sys
 import yaml
 
-# --- Configuración de Rutas ---
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-SHARED_LIBS_PATH = os.path.join(REPO_ROOT, 'Shared-Libs')
+# --- Configuración de Rutas Relativas al Script ---
+# Esto hace que el script funcione sin importar desde dónde lo llames
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
+SHARED_LIBS_PATH = os.path.join(REPO_ROOT, 'shared_libs')
 PATTERNS_FILE_PATH = os.path.join(SHARED_LIBS_PATH, 'nlu', 'patterns.yml')
-sys.path.insert(0, SHARED_LIBS_PATH)
 
-from nlu.language_assets import SYNONYMS
+# Añadimos la raíz del proyecto al path para que pueda encontrar el paquete "shared_libs"
+sys.path.insert(0, REPO_ROOT)
+
+from shared_libs.nlu.language_assets import SYNONYMS
 
 def build_intent_patterns():
-    """
-    Genera dinámicamente los patrones de intención basados en el diccionario SYNONYMS.
-    """
-    
+    # ... (EL RESTO DE LA FUNCIÓN SE QUEDA EXACTAMENTE IGUAL) ...
+    # ... (No he pegado el resto para no ser repetitivo, copia y pega el tuyo) ...
     # Mapeo de verbos principales (claves de SYNONYMS) a un nombre de Intención base
     ACTION_MAP = {
         "crear": "Create", "genera": "Create", "dibuja": "Create", "construir": "Create",
@@ -78,6 +80,7 @@ def build_intent_patterns():
         final_intents[name]['patterns'].extend(data['patterns'])
     
     return final_intents
+
 
 def update_patterns_file(new_intents):
     """
