@@ -1,830 +1,136 @@
+# ===================================================================
+# Archivo de patrones para la NLU del Agente de Revit (Versión Definitiva)
+# Basado en el análisis de train_data.jsonl y synonyms.
+# ===================================================================
+
 slots:
+  # Tu sección de slots es excelente, la mantenemos tal cual.
   dimension_length: \b(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|'|"|in|pulgada[s]?)\s*(?:de\s*)?(?:largo|longitud)\b
   dimension_height: \b(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|'|"|in|pulgada[s]?)\s*(?:de\s*)?(?:alto|altura)\b
   dimension_width: \b(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|'|"|in|pulgada[s]?)\s*(?:de\s*)?(?:ancho|anchura)\b
-  dimension_thickness: \b(?:espesor|grosor)\s*(?:de)?\s*(\d+(?:\.\d+)?)\s*(cm|mm|m|metros?|ft|pie[s]?|'|"|in|pulgada[s]?)\b
-  dimension_diameter: \b(?:diámetro|diametro)\s*(?:de)?\s*(\d+(?:\.\d+)?)\s*(mm|cm|m|metros?|ft|pie[s]?|'|"|in|pulgada[s]?)\b
-  dimension_spacing: \b(?:separados|separación\s*de|espaciados)\s*(\d+(?:\.\d+)?)\s*(m|metros?|ft|pie[s]?|')\b
-  dimension_offset: \b(?:desfase|offset)\s*(?:de)?\s*(-?\d+(?:\.\d+)?)\s*(m|metros?|cm|mm|ft|pie[s]?|'|"|in|pulgada[s]?)\b
-  dimension_compound: \b(\d+(?:\.\d+)?)\s*(?:x|×|por)\s*(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|')?\b
+  dimension_thickness: \b(?:espesor|grosor|thickness)\s*(?:de|of)?\s*(\d+(?:\.\d+)?)\s*(cm|mm|m|metros?|ft|pie[s]?|'|"|in|pulgada[s]?)\b
+  dimension_diameter: \b(?:diámetro|diametro|diameter)\s*(?:de|of)?\s*(\d+(?:\.\d+)?)\s*(mm|cm|m|metros?|ft|pie[s]?|'|"|in|pulgada[s]?)\b
+  dimension_spacing: \b(?:separados|separación\s*de|espaciados|spaced)\s*(\d+(?:\.\d+)?)\s*(m|metros?|ft|pie[s]?|')\b
+  dimension_offset: \b(?:desfase|offset)\s*(?:de|with an)?\s*(-?\d+(?:\.\d+)?)\s*(m|metros?|cm|mm|ft|pie[s]?|'|"|in|pulgada[s]?)\b
+  dimension_compound: \b(\d+(?:\.\d+)?)\s*(?:x|×|por|by)\s*(\d+(?:\.\d+)?)\s*(?:m|metros?|ft|pie[s]?|')?\b
   dimension_generic_with_unit: \b(\d+(?:\.\d+)?)\s*(m|metros?|cm|mm|ft|pie[s]?|'|"|in|pulgada[s]?)\b
-  quantity: \b(crea|genera|dibuja|coloca)\s*(\d+)\s*(ejes?|muros?|columnas?|vigas?|niveles?|planos?|worksets?)\b
-  angle_degrees: \b(-?\d+(?:\.\d+)?)\s*(?:°|grados)\b
-  element_category: \b(muros?|paredes?|puertas?|ventanas?|pilares?|columnas?|suelos?|pisos?|techos?|cubiertas?|vigas?|ejes?|rejillas?|tuberías?|ductos?|mobiliario|barandales?|cimentaciones?|losas?|planos?|hojas?|familias?|tablas?|vínculos?|líneas?|habitaciones?|cuartos?|espacios?|worksets?)\b
-  level_name: \b(?:en\s*el|del)?\s*(?:nivel|planta)\s*['"]?([a-zA-Z0-9\s_\.\-]+)['"]?\b
-  view_name: \b(?:en\s*la\s*)?vista\s*['"]([^'"]+)['"]\b
-  family_type: \b(?:del\s*tipo|tipo|familia)\s*['"]([^'"]+)['"]\b
-  material_name: \b(?:material|con\s*el\s*color|con)\s*['"]([^'"]+)['"]\b
-  color_name: \b(roj[oa]|azul|verde|amarill[oa]|blanc[oa]|negr[oa])\b
-  parameter_name: \b(?:el\s*parámetro|parámetro|la\s*propiedad|propiedad)\s*['"]([^'"]+)['"]\b
-  parameter_value: \b(?:a|sea|es|con\s*valor\s*de|igual\s*a)\s+(['"]?[^'"]+['"]?)\b
-  new_name_definition: \b(?:llamado|nómbralo|con\s*el\s*nombre|nombre)\s*['"]([^'"]+)['"]\b
-  name_prefix: \b(?:prefijo|que\s*empiecen\s*con)\s*['"]([^'"]+)['"]\b
-  name_suffix: \b(?:sufijo|que\s*terminen\s*con)\s*['"]([^'"]+)['"]\b
+  quantity: \b(crea|genera|dibuja|coloca|create|generate|draw|place)\s*(\d+)\s*(ejes?|muros?|columnas?|vigas?|niveles?|planos?|worksets?)\b
+  angle_degrees: \b(-?\d+(?:\.\d+)?)\s*(?:°|grados|degrees)\b
+  element_category: \b(muros?|paredes?|walls?|puertas?|doors?|ventanas?|windows?|pilares?|columnas?|columns?|suelos?|pisos?|floors?|techos?|cubiertas?|roofs?|vigas?|beams?|ejes?|rejillas?|grids?|tuberías?|pipes?|ductos?|ducts?|mobiliario|furniture|barandales?|railings?|cimentaciones?|foundations?|losas?|slabs?|planos?|hojas?|sheets?|familias?|families|tablas?|schedules?|vínculos?|links?|líneas?|lines?|habitaciones?|cuartos?|rooms?|espacios?|spaces?|worksets?|subproyectos?)\b
+  level_name: \b(?:en\s*el|del|on|at|in)\s*(?:level|nivel|planta)\s*['"]?([a-zA-Z0-9\s_\.\-]+)['"]?\b
+  view_name: \b(?:en\s*la|in the)?\s*view\s*['"]([^'"]+)['"]\b
+  family_type: \b(?:del\s*tipo|tipo|familia|type|family)\s*['"]([^'"]+)['"]\b
+  material_name: \b(?:material|con\s*el\s*color|with|color)\s*['"]([^'"]+)['"]\b
+  color_name: \b(roj[oa]|red|azul|blue|verde|green|amarill[oa]|yellow|blanc[oa]|white|negr[oa]|black)\b
+  parameter_name: \b(?:el\s*parámetro|parámetro|la\s*propiedad|propiedad|parameter|property)\s*['"]([^'"]+)['"]\b
+  parameter_value: \b(?:a|to|sea|es|is|con\s*valor\s*de|with\s*a\s*value\s*of|igual\s*a|equals?)\s+(['"]?[^'"]+['"]?)\b
+  new_name_definition: \b(?:llamado|nómbralo|con\s*el\s*nombre|nombre|named|call it|name it)\s*['"]([^'"]+)['"]\b
+  name_prefix: \b(?:prefijo|prefix|que\s*empiecen\s*con|starting with)\s*['"]([^'"]+)['"]\b
+  name_suffix: \b(?:sufijo|suffix|que\s*terminen\s*con|ending with)\s*['"]([^'"]+)['"]\b
   axis_identifier: \beje[s]?\s*([A-Z0-9\.]+)\b
   file_path: ([a-zA-Z]:\\[\\\S|*\S]?.*?\.(rfa|dwg|rvt|ifc|csv|nwc|txt))
-  coordinates_xy: \b(?:en|a|en\s*la\s*posición|en\s*las\s*coordenadas)\s*\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?\b|\bX\s*=\s*(-?\d+(?:\.\d+)?)\s*,\s*Y\s*=\s*(-?\d+(?:\.\d+)?)\b
+  coordinates_xy: \b(?:en|a|at|in|position|coordenadas)\s*\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?\b|\bX\s*=\s*(-?\d+(?:\.\d+)?)\s*,\s*Y\s*=\s*(-?\d+(?:\.\d+)?)\b
   coordinates_xyz: \(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?
   orientation: \b(horizontales?|verticales?|norte|sur|este|oeste|horizontal|vertical|longitudinal)\b
-  level_elevation: \b(?:a|con|en)\s+(?:una\s+)?(?:elevación|altura)\s+(?:de\s*)?(-?\d+(?:\.\d+)?)\s*(m|metros?|ft|pie[s]?)?\b
-  direction_vector: \b(?:hacia|en\s*la\s*dirección)\s+(arriba|abajo|izquierda|derecha|adelante|atrás)\b
-  structural_usage: \b(estructural(?:es)?|de\s*carga|de\s*corte|combinado)\b
-  action_on_selection: \b(seleccionad[oa]s?|por\s*el\s*usuario|que\s*seleccione|elemento\s*dado)\b
-  active_context: \b(vista\s*activa|modelo\s*actual|proyecto\s*actual|documento\s*actual)\b
-  all_elements: \b(tod[oa]s?\s*l[oa]s?)\b
-  target_host: \b(en\s*un\s*muro|en\s*una\s*pared|en\s*una\s*losa|en\s*un\s*suelo|en\s*una\s*escalera)\b
+  level_elevation: \b(?:a|con|en|at)\s+(?:una\s+)?(?:elevación|altura|elevation)\s+(?:de|of\s*)?(-?\d+(?:\.\d+)?)\s*(m|metros?|ft|pie[s]?)?\b
+  direction_vector: \b(?:hacia|en\s*la\s*dirección|towards|in the direction)\s+(arriba|abajo|izquierda|derecha|adelante|atrás|up|down|left|right|forward|backward)\b
+  structural_usage: \b(estructural(?:es)?|de\s*carga|de\s*corte|combinado|structural|bearing|shear)\b
+  action_on_selection: \b(seleccionad[oa]s?|selected|por\s*el\s*usuario|que\s*seleccione|elemento\s*dado)\b
+  active_context: \b(vista\s*activa|active\s*view|modelo\s*actual|proyecto\s*actual|documento\s*actual)\b
+  all_elements: \b(tod[oa]s?\s*l[oa]s?|all the|every)\b
+  target_host: \b(en\s*un\s*muro|en\s*una\s*pared|on\s*a\s*wall|en\s*una\s*losa|en\s*un\s*suelo|on\s*a\s*floor|on\s*a\s*slab|en\s*una\s*escalera|on\s*a\s*stair)\b
   file_format: \b(NWC|IFC|CSV|PDF|DWG|SAT)\b
+
 intents:
+  # --- INTENCIONES DE CREACIÓN (Muy Específicas) ---
   CreateWall:
     patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(construir)\b.*\s\b(muro|pared|wall)s?\b
-  CreateFamilyInstance:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(construir)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  CreateLevel:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(nivel|planta|level)es\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(nivel|planta|level)es\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(nivel|planta|level)es\b
-    - \b(construir)\b.*\s\b(nivel|planta|level)es\b
-  CreateGrid:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(construir)\b.*\s\b(eje|rejilla|grid)s?\b
-  CreateFloor:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(construir)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  CreateSchedule:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(construir)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  CreateWorkset:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(construir)\b.*\s\b(workset|subproyecto)s?\b
-  CreateOpening:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(construir)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  CreateDimension:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(construir)\b.*\s\b(cota|dimensión|dimension)es\b
-  CreateParameter:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(construir)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  CreateType:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(tipo|type)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(tipo|type)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(tipo|type)s?\b
-    - \b(construir)\b.*\s\b(tipo|type)s?\b
-  CreateGeometry:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(construir)\b.*\s\b(geometr(í|i)a)s?\b
-  CreateView:
-    patterns:
-    - \b(crear|generar|construir|modelar|originar)\b.*\s\b(vista|view)s?\b
-    - \b(genera|crea|construye|modela)\b.*\s\b(vista|view)s?\b
-    - \b(dibuja|traza|plasma|representa)\b.*\s\b(vista|view)s?\b
-    - \b(construir)\b.*\s\b(vista|view)s?\b
-  InsertWall:
-    patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(muro|pared|wall)s?\b
+      - '(?=.*\b(crea|genera|construye|dibuja|origina|modela|build|create|draw|construct|model)\b).*\b(muro|pared|wall)s?\b'
   InsertFamilyInstance:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  InsertLevel:
+      - '(?=.*\b(inserta|coloca|pon|sitúa|ubica|añade|place|insert|add|position)\b).*\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía|componente|door|window|column|beam|furniture|component)s?\b'
+  CreateLevel:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(nivel|planta|level)es\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(nivel|planta|level)es\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(nivel|planta|level)es\b
-  InsertGrid:
+      - '(?=.*\b(crea|genera|añade|create|add)\b).*\b(nivel|planta|level)s?\b'
+  CreateGrid:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(eje|rejilla|grid)s?\b
-  InsertFloor:
+      - '(?=.*\b(crea|genera|dibuja|create|draw)\b).*\b(eje|rejilla|grid)s?\b'
+  CreateFloor:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  InsertSchedule:
+      - '(?=.*\b(crea|genera|dibuja|mod?ela|create|draw|model)\b).*\b(suelo|piso|losa|placa|floor|slab)s?\b'
+  CreateSchedule:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  InsertWorkset:
+      - '(?=.*\b(crea|genera|create|generate)\b).*\b(tabla|planificación|schedule|cómputo)s?\b'
+  CreateWorkset:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(workset|subproyecto)s?\b
-  InsertOpening:
+      - '(?=.*\b(crea|genera|create|generate)\b).*\b(workset|subproyecto)s?\b'
+  CreateOpening:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  InsertDimension:
+      - '(?=.*\b(crea|haz|genera|create|make)\b).*\b(agujero|hueco|apertura|opening|shaft)s?\b'
+  CreateDimension:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(cota|dimensión|dimension)es\b
-  InsertParameter:
+      - '(?=.*\b(crea|coloca|añade|create|add)\b).*\b(cota|dimensión|dimension)s?\b'
+  TagElement:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  InsertType:
+      - '\b(etiqueta|taguea|tag|label|annotate)\b'
+
+  # --- INTENCIONES DE MODIFICACIÓN ---
+  SetElementParameter:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(tipo|type)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(tipo|type)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(tipo|type)s?\b
-  InsertGeometry:
+      - '(?=.*\b(cambia|establece|modifica|asigna|setea|set|define|change|update)\b).*\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b'
+  ChangeElementType:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(geometr(í|i)a)s?\b
-  InsertView:
+      - '(?=.*\b(cambia|modifica|change)\b).*\b(tipo|type)s?\b'
+  RenameElements:
     patterns:
-    - \b(inserta|coloca|pone|situa)\b.*\s\b(vista|view)s?\b
-    - \b(coloca|sitúa|ubica|inserta)\b.*\s\b(vista|view)s?\b
-    - \b(añade|agrega|incorpora|inserta)\b.*\s\b(vista|view)s?\b
-  DuplicateWall:
+      - '\b(renombra|cambia\s+el\s+nombre|rename)\b'
+  MoveElement:
     patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(copia)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(clona)\b.*\s\b(muro|pared|wall)s?\b
-  DuplicateFamilyInstance:
+      - '\b(mueve|desplaza|move)\b'
+  RotateElement:
     patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(copia)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(clona)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  DuplicateLevel:
+      - '\b(rota|gira|vira|rotate|turn|spin)\b'
+  PinElements:
     patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(nivel|planta|level)es\b
-    - \b(copia)\b.*\s\b(nivel|planta|level)es\b
-    - \b(clona)\b.*\s\b(nivel|planta|level)es\b
-  DuplicateGrid:
+      - '\b(fija|bloquea|pin|lock)\b'
+  UnpinElements:
     patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(copia)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(clona)\b.*\s\b(eje|rejilla|grid)s?\b
-  DuplicateFloor:
+      - '\b(desbloquea|desfija|unpin|unlock)\b'
+  DeleteElements:
     patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(copia)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(clona)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  DuplicateSchedule:
-    patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(copia)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(clona)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  DuplicateWorkset:
-    patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(copia)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(clona)\b.*\s\b(workset|subproyecto)s?\b
-  DuplicateOpening:
-    patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(copia)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(clona)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  DuplicateDimension:
-    patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(copia)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(clona)\b.*\s\b(cota|dimensión|dimension)es\b
-  DuplicateParameter:
-    patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(copia)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(clona)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
+      - '\b(borra|elimina|quita|suprime|delete|remove|erase)\b'
   DuplicateType:
     patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(tipo|type)s?\b
-    - \b(copia)\b.*\s\b(tipo|type)s?\b
-    - \b(clona)\b.*\s\b(tipo|type)s?\b
-  DuplicateGeometry:
+      - '(?=.*\b(duplica|reproduce|copia|clona|duplicate|copy|clone)\b).*\b(tipo|type)s?\b'
+  DuplicateElements: # Intención más general si no se especifica "tipo"
     patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(copia)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(clona)\b.*\s\b(geometr(í|i)a)s?\b
-  DuplicateView:
-    patterns:
-    - \b(duplica|reproduce|copia|clona)\b.*\s\b(vista|view)s?\b
-    - \b(copia)\b.*\s\b(vista|view)s?\b
-    - \b(clona)\b.*\s\b(vista|view)s?\b
-  ChangeWall:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(modifica)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(ajusta)\b.*\s\b(muro|pared|wall)s?\b
-  ChangeFamilyInstance:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(modifica)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(ajusta)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  ChangeLevel:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(nivel|planta|level)es\b
-    - \b(modifica)\b.*\s\b(nivel|planta|level)es\b
-    - \b(ajusta)\b.*\s\b(nivel|planta|level)es\b
-  ChangeGrid:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(modifica)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(ajusta)\b.*\s\b(eje|rejilla|grid)s?\b
-  ChangeFloor:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(modifica)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(ajusta)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  ChangeSchedule:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(modifica)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(ajusta)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  ChangeWorkset:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(modifica)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(ajusta)\b.*\s\b(workset|subproyecto)s?\b
-  ChangeOpening:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(modifica)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(ajusta)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  ChangeDimension:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(modifica)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(ajusta)\b.*\s\b(cota|dimensión|dimension)es\b
-  ChangeParameter:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(modifica)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(ajusta)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  ChangeType:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(tipo|type)s?\b
-    - \b(modifica)\b.*\s\b(tipo|type)s?\b
-    - \b(ajusta)\b.*\s\b(tipo|type)s?\b
-  ChangeGeometry:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(modifica)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(ajusta)\b.*\s\b(geometr(í|i)a)s?\b
-  ChangeView:
-    patterns:
-    - \b(cambia|modifica|ajusta|actualiza)\b.*\s\b(vista|view)s?\b
-    - \b(modifica)\b.*\s\b(vista|view)s?\b
-    - \b(ajusta)\b.*\s\b(vista|view)s?\b
-  SetWall:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(configura)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(asigna)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(define)\b.*\s\b(muro|pared|wall)s?\b
-  SetFamilyInstance:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(configura)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(asigna)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(define)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  SetLevel:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(nivel|planta|level)es\b
-    - \b(configura)\b.*\s\b(nivel|planta|level)es\b
-    - \b(asigna)\b.*\s\b(nivel|planta|level)es\b
-    - \b(define)\b.*\s\b(nivel|planta|level)es\b
-  SetGrid:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(configura)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(asigna)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(define)\b.*\s\b(eje|rejilla|grid)s?\b
-  SetFloor:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(configura)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(asigna)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(define)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  SetSchedule:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(configura)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(asigna)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(define)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  SetWorkset:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(configura)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(asigna)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(define)\b.*\s\b(workset|subproyecto)s?\b
-  SetOpening:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(configura)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(asigna)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(define)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  SetDimension:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(configura)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(asigna)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(define)\b.*\s\b(cota|dimensión|dimension)es\b
-  SetParameter:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(configura)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(asigna)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(define)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  SetType:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(tipo|type)s?\b
-    - \b(configura)\b.*\s\b(tipo|type)s?\b
-    - \b(asigna)\b.*\s\b(tipo|type)s?\b
-    - \b(define)\b.*\s\b(tipo|type)s?\b
-  SetGeometry:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(configura)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(asigna)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(define)\b.*\s\b(geometr(í|i)a)s?\b
-  SetView:
-    patterns:
-    - \b(setea|configura|asigna|define)\b.*\s\b(vista|view)s?\b
-    - \b(configura)\b.*\s\b(vista|view)s?\b
-    - \b(asigna)\b.*\s\b(vista|view)s?\b
-    - \b(define)\b.*\s\b(vista|view)s?\b
-  QueryWall:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(extrae)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(recupera)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(lista)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(encuentra)\b.*\s\b(muro|pared|wall)s?\b
-  QueryFamilyInstance:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(extrae)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(recupera)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(lista)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(encuentra)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  QueryLevel:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(nivel|planta|level)es\b
-    - \b(extrae)\b.*\s\b(nivel|planta|level)es\b
-    - \b(recupera)\b.*\s\b(nivel|planta|level)es\b
-    - \b(lista)\b.*\s\b(nivel|planta|level)es\b
-    - \b(encuentra)\b.*\s\b(nivel|planta|level)es\b
-  QueryGrid:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(extrae)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(recupera)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(lista)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(encuentra)\b.*\s\b(eje|rejilla|grid)s?\b
-  QueryFloor:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(extrae)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(recupera)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(lista)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(encuentra)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  QuerySchedule:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(extrae)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(recupera)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(lista)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(encuentra)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  QueryWorkset:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(extrae)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(recupera)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(lista)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(encuentra)\b.*\s\b(workset|subproyecto)s?\b
-  QueryOpening:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(extrae)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(recupera)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(lista)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(encuentra)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  QueryDimension:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(extrae)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(recupera)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(lista)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(encuentra)\b.*\s\b(cota|dimensión|dimension)es\b
-  QueryParameter:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(extrae)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(recupera)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(lista)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(encuentra)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  QueryType:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(tipo|type)s?\b
-    - \b(extrae)\b.*\s\b(tipo|type)s?\b
-    - \b(recupera)\b.*\s\b(tipo|type)s?\b
-    - \b(lista)\b.*\s\b(tipo|type)s?\b
-    - \b(encuentra)\b.*\s\b(tipo|type)s?\b
-  QueryGeometry:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(extrae)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(recupera)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(lista)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(encuentra)\b.*\s\b(geometr(í|i)a)s?\b
-  QueryView:
-    patterns:
-    - \b(obtén|extrae|recupera)\b.*\s\b(vista|view)s?\b
-    - \b(extrae)\b.*\s\b(vista|view)s?\b
-    - \b(recupera)\b.*\s\b(vista|view)s?\b
-    - \b(lista)\b.*\s\b(vista|view)s?\b
-    - \b(encuentra)\b.*\s\b(vista|view)s?\b
-  DeleteWall:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(elimina)\b.*\s\b(muro|pared|wall)s?\b
-  DeleteFamilyInstance:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(elimina)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  DeleteLevel:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(nivel|planta|level)es\b
-    - \b(elimina)\b.*\s\b(nivel|planta|level)es\b
-  DeleteGrid:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(elimina)\b.*\s\b(eje|rejilla|grid)s?\b
-  DeleteFloor:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(elimina)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  DeleteSchedule:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(elimina)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  DeleteWorkset:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(elimina)\b.*\s\b(workset|subproyecto)s?\b
-  DeleteOpening:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(elimina)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  DeleteDimension:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(elimina)\b.*\s\b(cota|dimensión|dimension)es\b
-  DeleteParameter:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(elimina)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  DeleteType:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(tipo|type)s?\b
-    - \b(elimina)\b.*\s\b(tipo|type)s?\b
-  DeleteGeometry:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(elimina)\b.*\s\b(geometr(í|i)a)s?\b
-  DeleteView:
-    patterns:
-    - \b(borra|elimina|suprime|remueve)\b.*\s\b(vista|view)s?\b
-    - \b(elimina)\b.*\s\b(vista|view)s?\b
-  RotateWall:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(gira)\b.*\s\b(muro|pared|wall)s?\b
-  RotateFamilyInstance:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(gira)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  RotateLevel:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(nivel|planta|level)es\b
-    - \b(gira)\b.*\s\b(nivel|planta|level)es\b
-  RotateGrid:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(gira)\b.*\s\b(eje|rejilla|grid)s?\b
-  RotateFloor:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(gira)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  RotateSchedule:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(gira)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  RotateWorkset:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(gira)\b.*\s\b(workset|subproyecto)s?\b
-  RotateOpening:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(gira)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  RotateDimension:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(gira)\b.*\s\b(cota|dimensión|dimension)es\b
-  RotateParameter:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(gira)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  RotateType:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(tipo|type)s?\b
-    - \b(gira)\b.*\s\b(tipo|type)s?\b
-  RotateGeometry:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(gira)\b.*\s\b(geometr(í|i)a)s?\b
-  RotateView:
-    patterns:
-    - \b(rota|gira|vira|voltea)\b.*\s\b(vista|view)s?\b
-    - \b(gira)\b.*\s\b(vista|view)s?\b
-  PinWall:
-    patterns:
-    - \b(fija)\b.*\s\b(muro|pared|wall)s?\b
-    - \b(bloquea)\b.*\s\b(muro|pared|wall)s?\b
-  PinFamilyInstance:
-    patterns:
-    - \b(fija)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-    - \b(bloquea)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  PinLevel:
-    patterns:
-    - \b(fija)\b.*\s\b(nivel|planta|level)es\b
-    - \b(bloquea)\b.*\s\b(nivel|planta|level)es\b
-  PinGrid:
-    patterns:
-    - \b(fija)\b.*\s\b(eje|rejilla|grid)s?\b
-    - \b(bloquea)\b.*\s\b(eje|rejilla|grid)s?\b
-  PinFloor:
-    patterns:
-    - \b(fija)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-    - \b(bloquea)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  PinSchedule:
-    patterns:
-    - \b(fija)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-    - \b(bloquea)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  PinWorkset:
-    patterns:
-    - \b(fija)\b.*\s\b(workset|subproyecto)s?\b
-    - \b(bloquea)\b.*\s\b(workset|subproyecto)s?\b
-  PinOpening:
-    patterns:
-    - \b(fija)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-    - \b(bloquea)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  PinDimension:
-    patterns:
-    - \b(fija)\b.*\s\b(cota|dimensión|dimension)es\b
-    - \b(bloquea)\b.*\s\b(cota|dimensión|dimension)es\b
-  PinParameter:
-    patterns:
-    - \b(fija)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-    - \b(bloquea)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  PinType:
-    patterns:
-    - \b(fija)\b.*\s\b(tipo|type)s?\b
-    - \b(bloquea)\b.*\s\b(tipo|type)s?\b
-  PinGeometry:
-    patterns:
-    - \b(fija)\b.*\s\b(geometr(í|i)a)s?\b
-    - \b(bloquea)\b.*\s\b(geometr(í|i)a)s?\b
-  PinView:
-    patterns:
-    - \b(fija)\b.*\s\b(vista|view)s?\b
-    - \b(bloquea)\b.*\s\b(vista|view)s?\b
-  JoinWall:
-    patterns:
-    - \b(une)\b.*\s\b(muro|pared|wall)s?\b
-  JoinFamilyInstance:
-    patterns:
-    - \b(une)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  JoinLevel:
-    patterns:
-    - \b(une)\b.*\s\b(nivel|planta|level)es\b
-  JoinGrid:
-    patterns:
-    - \b(une)\b.*\s\b(eje|rejilla|grid)s?\b
-  JoinFloor:
-    patterns:
-    - \b(une)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  JoinSchedule:
-    patterns:
-    - \b(une)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  JoinWorkset:
-    patterns:
-    - \b(une)\b.*\s\b(workset|subproyecto)s?\b
-  JoinOpening:
-    patterns:
-    - \b(une)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  JoinDimension:
-    patterns:
-    - \b(une)\b.*\s\b(cota|dimensión|dimension)es\b
-  JoinParameter:
-    patterns:
-    - \b(une)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  JoinType:
-    patterns:
-    - \b(une)\b.*\s\b(tipo|type)s?\b
+       - '\b(duplica|reproduce|copia|clona|duplicate|copy|clone)\b'
   JoinGeometry:
     patterns:
-    - \b(une)\b.*\s\b(geometr(í|i)a)s?\b
-  JoinView:
+      - '\b(une|junta|unir|join)\s+(la|the)?\s*geometr(í|i)a\b'
+  ChangeElementVisibility:
     patterns:
-    - \b(une)\b.*\s\b(vista|view)s?\b
-  ExportWall:
+      - '\b(oculta|apaga|esconde|hide|muestra|enciende|visibiliza|unhide|show)\b'
+
+  # --- INTENCIONES DE CONSULTA Y GESTIÓN ---
+  QueryElements:
     patterns:
-    - \b(exporta)\b.*\s\b(muro|pared|wall)s?\b
-  ExportFamilyInstance:
+      - '\b(cuántos|cuántas|lista|dime|encuentra|selecciona|busca|get|how\s+many|list|find|select|retrieve|fetch)\b'
+  ExportFile:
     patterns:
-    - \b(exporta)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  ExportLevel:
+      - '\b(exporta|export)\b'
+  SyncWithCentral:
     patterns:
-    - \b(exporta)\b.*\s\b(nivel|planta|level)es\b
-  ExportGrid:
+      - '\b(sincroniza|sync)\b'
+
+  # --- INTENCIONES GENÉRICAS (FALLBACK) ---
+  # Se evalúan al final si nada de lo anterior coincide.
+  Query:
     patterns:
-    - \b(exporta)\b.*\s\b(eje|rejilla|grid)s?\b
-  ExportFloor:
+      - '\b(qué|cuál|dónde|what|which|where)\b'
+  Modify:
     patterns:
-    - \b(exporta)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  ExportSchedule:
+      - '\b(modifica|ajusta|cambia|modify|adjust|change)\b'
+  Create:
     patterns:
-    - \b(exporta)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  ExportWorkset:
-    patterns:
-    - \b(exporta)\b.*\s\b(workset|subproyecto)s?\b
-  ExportOpening:
-    patterns:
-    - \b(exporta)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  ExportDimension:
-    patterns:
-    - \b(exporta)\b.*\s\b(cota|dimensión|dimension)es\b
-  ExportParameter:
-    patterns:
-    - \b(exporta)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  ExportType:
-    patterns:
-    - \b(exporta)\b.*\s\b(tipo|type)s?\b
-  ExportGeometry:
-    patterns:
-    - \b(exporta)\b.*\s\b(geometr(í|i)a)s?\b
-  ExportView:
-    patterns:
-    - \b(exporta)\b.*\s\b(vista|view)s?\b
-  HideWall:
-    patterns:
-    - \b(oculta)\b.*\s\b(muro|pared|wall)s?\b
-  HideFamilyInstance:
-    patterns:
-    - \b(oculta)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  HideLevel:
-    patterns:
-    - \b(oculta)\b.*\s\b(nivel|planta|level)es\b
-  HideGrid:
-    patterns:
-    - \b(oculta)\b.*\s\b(eje|rejilla|grid)s?\b
-  HideFloor:
-    patterns:
-    - \b(oculta)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  HideSchedule:
-    patterns:
-    - \b(oculta)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  HideWorkset:
-    patterns:
-    - \b(oculta)\b.*\s\b(workset|subproyecto)s?\b
-  HideOpening:
-    patterns:
-    - \b(oculta)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  HideDimension:
-    patterns:
-    - \b(oculta)\b.*\s\b(cota|dimensión|dimension)es\b
-  HideParameter:
-    patterns:
-    - \b(oculta)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  HideType:
-    patterns:
-    - \b(oculta)\b.*\s\b(tipo|type)s?\b
-  HideGeometry:
-    patterns:
-    - \b(oculta)\b.*\s\b(geometr(í|i)a)s?\b
-  HideView:
-    patterns:
-    - \b(oculta)\b.*\s\b(vista|view)s?\b
-  ShowWall:
-    patterns:
-    - \b(muestra)\b.*\s\b(muro|pared|wall)s?\b
-  ShowFamilyInstance:
-    patterns:
-    - \b(muestra)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  ShowLevel:
-    patterns:
-    - \b(muestra)\b.*\s\b(nivel|planta|level)es\b
-  ShowGrid:
-    patterns:
-    - \b(muestra)\b.*\s\b(eje|rejilla|grid)s?\b
-  ShowFloor:
-    patterns:
-    - \b(muestra)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  ShowSchedule:
-    patterns:
-    - \b(muestra)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  ShowWorkset:
-    patterns:
-    - \b(muestra)\b.*\s\b(workset|subproyecto)s?\b
-  ShowOpening:
-    patterns:
-    - \b(muestra)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  ShowDimension:
-    patterns:
-    - \b(muestra)\b.*\s\b(cota|dimensión|dimension)es\b
-  ShowParameter:
-    patterns:
-    - \b(muestra)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  ShowType:
-    patterns:
-    - \b(muestra)\b.*\s\b(tipo|type)s?\b
-  ShowGeometry:
-    patterns:
-    - \b(muestra)\b.*\s\b(geometr(í|i)a)s?\b
-  ShowView:
-    patterns:
-    - \b(muestra)\b.*\s\b(vista|view)s?\b
-  TagWall:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(muro|pared|wall)s?\b
-  TagFamilyInstance:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(instancia|familia|mobiliario|mueble|puerta|ventana|columna|pilar|viga|truss|celosía)s?\b
-  TagLevel:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(nivel|planta|level)es\b
-  TagGrid:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(eje|rejilla|grid)s?\b
-  TagFloor:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(suelo|piso|losa|placa|floor|slab)s?\b
-  TagSchedule:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(tabla|planificación|schedule|cómputo)s?\b
-  TagWorkset:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(workset|subproyecto)s?\b
-  TagOpening:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(agujero|hueco|apertura|opening|shaft)s?\b
-  TagDimension:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(cota|dimensión|dimension)es\b
-  TagParameter:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)s?\b
-  TagType:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(tipo|type)s?\b
-  TagGeometry:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(geometr(í|i)a)s?\b
-  TagView:
-    patterns:
-    - \b(tag|label|mark|annotate)\b.*\s\b(vista|view)s?\b
+      - '\b(crea|genera|dibuja|construye|create|generate|draw|build)\b'

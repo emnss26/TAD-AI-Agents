@@ -6,31 +6,35 @@ import faiss
 from sentence_transformers import SentenceTransformer
 
 # --- Configuración de Rutas ---
+# El script se ejecuta desde la raíz, por lo que podemos construir rutas relativas simples.
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
-SHARED_LIBS_PATH = os.path.join(REPO_ROOT, 'Shared-Libs')
-sys.path.insert(0, SHARED_LIBS_PATH)
 
-from nlu.intent_classifier import classify_intent
-from nlu.slot_filler import extract_slots
+# Añadimos la raíz del proyecto al path para poder importar el paquete 'shared_libs'
+sys.path.insert(0, REPO_ROOT)
+
+from shared_libs.nlu.intent_classifier import classify_intent
+from shared_libs.nlu.slot_filler import extract_slots
 
 # Rutas a los archivos de datos y del RAG
 DATA_DIR = os.path.join(REPO_ROOT, 'Revit-Agent', 'agent-revit-orchestrator', 'data')
 IN_FILE = os.path.join(DATA_DIR, 'train_data.jsonl')
-OUT_FILE = os.path.join(DATA_DIR, 'train_data_rag_format_v2.jsonl') # Nuevo nombre de archivo
+OUT_FILE = os.path.join(DATA_DIR, 'train_data_rag_format_v2.jsonl')
 FAISS_INDEX_PATH = os.path.join(DATA_DIR, 'faiss_index.bin')
 MAPPING_PATH = os.path.join(DATA_DIR, 'index_to_api.json')
+MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
 
 # --- Cargamos los componentes del RAG al inicio ---
 print("INFO: Cargando componentes del RAG...")
 try:
     rag_index = faiss.read_index(FAISS_INDEX_PATH)
     with open(MAPPING_PATH, 'r', encoding='utf-8') as f:
+        # Las claves en JSON siempre son strings, así que cargamos tal cual.
         index_to_api_map = json.load(f)
-    model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+    model = SentenceTransformer(MODEL_NAME)
     RAG_ENABLED = True
     print("INFO: RAG cargado con éxito.")
-except FileNotFoundError:
-    print("ADVERTENCIA: No se encontraron los archivos del RAG. 'RELEVANT_API_CONTEXT' estará vacío.")
+except Exception as e:
+    print(f"ADVERTENCIA: No se pudieron cargar los archivos del RAG. 'RELEVANT_API_CONTEXT' estará vacío. Error: {e}")
     RAG_ENABLED = False
 
 
@@ -41,11 +45,15 @@ def find_relevant_api_context(query: str, k: int = 3) -> list[str]:
     if not RAG_ENABLED:
         return []
     
-    query_vector = model.encode([query])
-    distances, indices = rag_index.search(np.array(query_vector).astype('float32'), k)
-    
-    # El mapeo usa claves string, así que convertimos los índices
-    return [index_to_api_map.get(str(i), "Unknown API entry") for i in indices[0]]
+    try:
+        query_vector = model.encode([query])
+        distances, indices = rag_index.search(np.array(query_vector).astype('float32'), k)
+        
+        # El mapeo usa claves string '0', '1', etc., así que convertimos los índices a string para buscar.
+        return [index_to_api_map.get(str(i), "Unknown API entry") for i in indices[0]]
+    except Exception as e:
+        print(f"ERROR durante la búsqueda RAG para la consulta '{query}': {e}")
+        return []
 
 
 def transform():
@@ -53,14 +61,15 @@ def transform():
     Transforma el dataset original al nuevo formato RAG, incluyendo el contexto de la API.
     """
     print(f"Transformando {IN_FILE} -> {OUT_FILE}...")
+    count = 0
     with open(IN_FILE, 'r', encoding='utf-8') as fin, \
          open(OUT_FILE, 'w', encoding='utf-8') as fout:
 
         for i, line in enumerate(fin):
             try:
                 obj = json.loads(line)
-                user_request = (obj.get('prompt') or "").split('\n')[0]
-                completion = obj.get('completion', '')
+                user_request = (obj.get('prompt') or "").strip()
+                completion = obj.get('completion', '').strip()
                 
                 if not user_request or not completion:
                     continue
@@ -78,18 +87,19 @@ def transform():
                     "DETECTED_INTENT": intent,
                     "EXTRACTED_SLOTS": slots,
                     "RELEVANT_API_CONTEXT": api_context,
-                    "EXPECTED_COMPLETION": completion # Guardamos el código esperado
+                    "EXPECTED_COMPLETION": completion
                 }
                 fout.write(json.dumps(new_obj, ensure_ascii=False) + "\n")
+                count += 1
 
-                if i % 500 == 0:
-                    print(f"  Procesadas {i} líneas...")
+                if (i + 1) % 500 == 0:
+                    print(f"  Procesadas {i+1} líneas...")
 
             except json.JSONDecodeError:
                 print(f"Advertencia: Se omitió una línea mal formada: {line.strip()}")
                 continue
     
-    print("\n✅ ¡Dataset transformado con formato RAG completo!")
+    print(f"\n✅ ¡Dataset transformado con formato RAG completo! Se procesaron {count} líneas.")
 
 
 if __name__ == "__main__":
