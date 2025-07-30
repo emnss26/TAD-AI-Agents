@@ -1,6 +1,7 @@
 import os
 import torch
 import functools
+import json
 from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
@@ -9,50 +10,60 @@ from transformers import (
     Trainer,
     BitsAndBytesConfig,
     DataCollatorForLanguageModeling,
-    EarlyStoppingCallback
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-# --- 1. FUNCIÓN DE FORMATEO Y TOKENIZACIÓN ---
-def format_prompt_with_eos(tokenizer, example):
-    return (
-        f"### INSTRUCTION:\n{example['prompt']}\n\n"
-        f"### RESPONSE:\n{example['completion']}{tokenizer.eos_token}"
-    )
+# --- 1. DEFINICIÓN DE RUTAS Y MODELO ---
+BASE_MODEL_NAME   = "meta-llama/CodeLlama-7b-instruct-hf"
+DATA_PATH         = os.path.join("Revit-Agent", "agent-revit-orchestrator", "data", "train_data_rag_format_v2.jsonl") 
+OUTPUT_DIR        = "lora_revit_agent_codellama_v1"
 
-def tokenize_dataset(tokenizer, examples, max_length=512):
-    formatted = [
-        format_prompt_with_eos(tokenizer, {'prompt': p, 'completion': c})
-        for p, c in zip(examples['prompt'], examples['completion'])
-    ]
+# --- 2. FUNCIÓN DE FORMATEO PARA EL "SÚPER-PROMPT" RAG ---
+def create_rag_prompt(example, tokenizer):
+    user_request = example.get("USER_REQUEST", "")
+    intent = example.get("DETECTED_INTENT", "Unknown")
+    slots = example.get("EXTRACTED_SLOTS", {})
+    api_context = example.get("RELEVANT_API_CONTEXT", [])
+    completion = example.get("EXPECTED_COMPLETION", "")
+
+    prompt = "### INSTRUCTION:\n"
+    prompt += f"Based on the following user request and context, generate the C# code for the Revit API.\n"
+    prompt += f"- User Request: '{user_request}'\n"
+    if intent != "Unknown":
+        prompt += f"- Detected Intent: {intent}\n"
+    if slots:
+        prompt += f"- Extracted Parameters: {slots}\n"
+    if api_context:
+        prompt += "\n--- Relevant API Documentation (Context)---\n"
+        for item in api_context:
+            prompt += f"- {item}\n"
+        prompt += "--------------------------------------\n"
+    
+    prompt += "Generate ONLY the C# code snippet. Do not add explanations or surrounding text."
+    prompt += "\n\n### RESPONSE:\n"
+    
+    full_text = prompt + completion + tokenizer.eos_token
+    return full_text
+
+def tokenize_dataset(tokenizer, batch):
+    max_length = 1024 
+    
+    # El batch ahora es una lista de diccionarios
+    formatted_texts = [create_rag_prompt(example, tokenizer) for example in batch]
+
     tokenized = tokenizer(
-        formatted,
+        formatted_texts,
         truncation=True,
         max_length=max_length,
-        padding="max_length" # Usamos padding fijo para máxima compatibilidad
+        padding="max_length"
     )
     tokenized["labels"] = tokenized["input_ids"].copy()
     return tokenized
 
-def compute_metrics(eval_pred):
-    # Esta es una métrica simple para pasar el eval_loss y que
-    # load_best_model_at_end sepa qué monitorear.
-    return {"eval_loss": eval_pred.metrics["eval_loss"]}
-
-# --- 2. SETUP Y CONFIGURACIÓN ---
+# --- FUNCIÓN PRINCIPAL DE ENTRENAMIENTO ---
 if __name__ == '__main__':
-    MODEL_NAME  = "microsoft/phi-2"
-    DATA_PATH   = os.path.join("data", "train_data.jsonl") 
-    OUTPUT_DIR  = "lora_revit_agent_phi2_v9"
-
-    print(f"INFO: CUDA disponible: {torch.cuda.is_available()}")
-    if not torch.cuda.is_available():
-        raise RuntimeError("Se requiere GPU CUDA para este script.")
-
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.benchmark = True
-
-    # --- 3. CARGA DEL MODELO Y TOKENIZER ---
+    print(f"INFO: Iniciando entrenamiento con el modelo base: {BASE_MODEL_NAME}")
+    
     quant_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
@@ -60,105 +71,88 @@ if __name__ == '__main__':
         bnb_4bit_compute_dtype=torch.bfloat16
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+    # Puede que necesites un token de Hugging Face: `huggingface-cli login`
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
 
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
+        BASE_MODEL_NAME,
         quantization_config=quant_config,
-        device_map={"": 0},
+        device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
-        low_cpu_mem_usage=True
     )
     model.config.use_cache = False
     model = prepare_model_for_kbit_training(model)
-    model.gradient_checkpointing_enable()
 
-    # --- 4. CONFIGURACIÓN DE LoRA (ALTA CAPACIDAD) ---
     lora_config = LoraConfig(
-        r=16,
+        r=32,
         lora_alpha=64,
-        target_modules=["q_proj", "k_proj", "v_proj", "dense"],
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
         lora_dropout=0.1,
         bias="none",
         task_type="CAUSAL_LM"
     )
     model = get_peft_model(model, lora_config)
-    print("INFO: Modelo configurado para entrenamiento de alta capacidad con LoRA.")
     model.print_trainable_parameters()
 
-    # --- 5. CARGA Y PROCESAMIENTO DEL DATASET ---
-    print(f"INFO: Cargando dataset desde {DATA_PATH}...")
-    raw_dataset = load_dataset("json", data_files=DATA_PATH, split="train")
-    split_dataset = raw_dataset.train_test_split(test_size=0.05, seed=42)
-    train_ds, eval_ds = split_dataset["train"], split_dataset["test"]
-    print(f"INFO: Tamaño de entrenamiento: {len(train_ds)} | Tamaño de evaluación: {len(eval_ds)}")
-
-    MAX_LEN = 512
-    tok_fn = functools.partial(tokenize_dataset, tokenizer, max_length=MAX_LEN)
+    print(f"INFO: Cargando y procesando dataset RAG desde {DATA_PATH}...")
+    dataset = load_dataset("json", data_files=DATA_PATH, split="train")
     
-    num_proc = max(1, os.cpu_count() // 1)
-    print(f"INFO: Tokenizando con {num_proc} procesos y longitud máxima de {MAX_LEN}...")
-    train_tok = train_ds.map(tok_fn, batched=True, remove_columns=train_ds.column_names, num_proc=num_proc)
-    eval_tok  = eval_ds.map(tok_fn,  batched=True, remove_columns=eval_ds.column_names,  num_proc=num_proc)
+    # La función de tokenización ahora espera una lista de diccionarios
+    # Pasamos el dataset directamente
+    tokenized_dataset = dataset.map(
+        lambda examples: tokenize_dataset(tokenizer, [example for example in examples]),
+        batched=True,
+        batch_size=100,
+        remove_columns=dataset.column_names
+    )
+    
+    split_dataset = tokenized_dataset.train_test_split(test_size=0.05, seed=42)
+    train_ds, eval_ds = split_dataset["train"], split_dataset["test"]
+    print(f"INFO: Dataset listo. Tamaño de entrenamiento: {len(train_ds)} | Tamaño de evaluación: {len(eval_ds)}")
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-    # --- 6. TrainingArguments (VERSIÓN MÁXIMA COMPATIBILIDAD) ---
-    effective_batch_size = 2 * 1
-    steps_per_epoch = max(1, len(train_tok) // effective_batch_size) 
-    print(f"INFO: Pasos por época estimados: {steps_per_epoch}")
-    
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
         per_device_train_batch_size=2,
-        gradient_accumulation_steps=1,
-        num_train_epochs=4,
+        gradient_accumulation_steps=4,
+        num_train_epochs=3,
         learning_rate=1e-4,
         weight_decay=0.01,
         warmup_ratio=0.1,
         lr_scheduler_type="cosine",
         optim="paged_adamw_8bit",
-
-       do_eval=True,
-       eval_steps=steps_per_epoch,       
-       save_steps=steps_per_epoch,       
-       save_total_limit=3,  
-
         bf16=True,
-        group_by_length=False, 
-        logging_dir="./logs",
-        logging_steps=100,
+        logging_dir=f"./logs/{OUTPUT_DIR}",
+        logging_steps=25,
+        evaluation_strategy="epoch",
+        save_strategy="epoch",
+        save_total_limit=2,
+        load_best_model_at_end=True,
         report_to="tensorboard"
     )
 
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_tok,
-        eval_dataset=eval_tok,
+        train_dataset=train_ds,
+        eval_dataset=eval_ds,
         data_collator=data_collator,
-        tokenizer=tokenizer,
-        compute_metrics=compute_metrics
+        tokenizer=tokenizer
     )
 
-    # --- 7. ENTRENAMIENTO ---
     print("\n" + "="*60)
-    print(f"🚀  INICIA ENTRENAMIENTO DEFINITIVO (MODO MÁXIMA COMPATIBILIDAD)  🚀")
-    print(f"  - Dataset: {len(train_tok)} ejemplos")
-    print(f"  - Épocas: {training_args.num_train_epochs}")
-    print(f"  - Longitud de Secuencia: {MAX_LEN}")
-    print(f"  - Rango LoRA (r): {lora_config.r}")
+    print("🚀  INICIANDO ENTRENAMIENTO DE ÉLITE CON CodeLlama y RAG  🚀")
     print("="*60 + "\n")
     
     trainer.train()
 
-    # --- 8. GUARDADO FINAL ---
-    print("\nINFO: Guardando el último adaptador LoRA...")
+    print("\nINFO: Guardando el mejor adaptador LoRA...")
     trainer.save_model(OUTPUT_DIR)
     
     print("\n" + "🏆"*10)
-    print(f"✅ ¡MISIÓN CUMPLIDA! El entrenamiento ha finalizado.")
-    print(f"✅ Revisa los checkpoints en './{OUTPUT_DIR}' para encontrar el de menor 'eval_loss'.")
+    print(f"✅ ¡MISIÓN CUMPLIDA! El entrenamiento de nueva generación ha finalizado.")
+    print(f"✅ El mejor modelo está guardado en: './{OUTPUT_DIR}'")
     print("🏆"*10)
