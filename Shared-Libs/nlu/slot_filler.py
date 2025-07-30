@@ -1,14 +1,17 @@
 # nlu/slot_filler.py
 import re
+import os
 import yaml
 
 # --- 1. Carga de Configuración ---
 # Cargar todos los patrones de slots definidos en el archivo YML.
 # Usamos la última versión de los slots que creamos, con unidades imperiales incluidas.
+PATTERNS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'patterns.yml')
 try:
-    with open("nlu/patterns.yml", "r", encoding="utf-8") as f:
+    with open(PATTERNS_PATH, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
         ALL_SLOTS_PATTERNS = cfg["slots"]
+        
 except FileNotFoundError:
     print("Error: 'nlu/patterns.yml' no encontrado. Asegúrate de que el archivo existe en la carpeta nlu/.")
     ALL_SLOTS_PATTERNS = {}

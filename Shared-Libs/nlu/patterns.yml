@@ -36,6 +36,8 @@ slots:
   coordinates_xy: '\b(?:en|a|en\s*la\s*posición|en\s*las\s*coordenadas)\s*\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?\b|\bX\s*=\s*(-?\d+(?:\.\d+)?)\s*,\s*Y\s*=\s*(-?\d+(?:\.\d+)?)\b'
   coordinates_xyz: '\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?'
   orientation: '\b(horizontales?|verticales?|norte|sur|este|oeste|horizontal|vertical|longitudinal)\b'
+  level_elevation: '\b(?:a|con|en)\s+(?:una\s+)?(?:elevación|altura)\s+(?:de\s*)?(-?\d+(?:\.\d+)?)\s*(m|metros?|ft|pie[s]?)?\b'
+  direction_vector: '\b(?:hacia|en\s*la\s*dirección)\s+(arriba|abajo|izquierda|derecha|adelante|atrás)\b'
 
   # --- 4. Atributos, Contexto y Selección ---
   structural_usage: '\b(estructural(?:es)?|de\s*carga|de\s*corte|combinado)\b'
@@ -46,17 +48,97 @@ slots:
   file_format: '\b(NWC|IFC|CSV|PDF|DWG|SAT)\b'
 
 intents:
+  # --- INTENCIONES DE CREACIÓN (Muy Específicas) ---
   CreateWall:
     patterns:
-      - '\b(muro|wall|pared)\b'
-      - '\b(entre)\b.*\beje[s]?\b'
-  QueryLevels:
+      - '\b(crea|dibuja|construye|genera|haz|build|create|draw)\s+(un|una|el|la|a)?\s*(muro|pared|wall)\b'
+      - '\b(muro|pared|wall)\s+entre\b'
+  InsertFamilyInstance:
     patterns:
-      - '\bnivel(es)?\b'
-      - '\b(niveles?)\b'
-  # Puedes añadir más intenciones aquí siguiendo el mismo formato.
-  # Ejemplo:
-  # CreateLevel:
-  #   patterns:
-  #     - 'crea un nivel'
-  #     - 'añade una planta'
+      - '\b(inserta|coloca|pon|sitúa|ubica|añade|place|insert|add|position)\s'
+      - '\b(ventana|puerta|window|door|columna|pilar|viga|beam|truss|celosía|mobiliario|mueble)\b'
+  CreateLevel:
+    patterns:
+      - '\b(crea|genera|añade|create|add)\s+(un|el|a)?\s*nuev[oa]\s*(nivel|planta|level)\b'
+  CreateGrid:
+    patterns:
+      - '\b(crea|genera|dibuja|create|draw)\s+\d*\s*(ejes?|rejillas?|grids?)\b'
+  CreateFloor:
+    patterns:
+      - '\b(crea|genera|dibuja|mod?ela|create|draw|model)\s+(un|el|a)?\s*(suelo|piso|losa|placa|floor|slab)\b'
+  CreateSchedule:
+    patterns:
+      - '\b(crea|genera|create|generate)\s+(una|la|a)?\s*(tabla|planificación|schedule|cómputo)\b'
+  CreateWorkset:
+    patterns:
+      - '\b(crea|genera|create|generate)\s+\d*\s*(workset|subproyecto)\b'
+  CreateOpening:
+    patterns:
+      - '\b(crea|haz|genera|create|make)\s+(un|una|a|an)?\s*(agujero|hueco|apertura|opening|shaft)\b'
+  CreateDimension:
+    patterns:
+      - '\b(crea|coloca|añade|create|add)\s+(una|a)?\s*(cota|dimensión|dimension)\b'
+  TagElement:
+    patterns:
+      - '\b(etiqueta|taguea|tag)\b'
+
+  # --- INTENCIONES DE MODIFICACIÓN ---
+  SetElementParameter:
+    patterns:
+      - '\b(cambia|establece|modifica|asigna|set|define|change)\s+(el|la|the)?\s*(parámetro|propiedad|comentario|marca|valor|parameter|property|comment|mark|value)\b'
+      - '\b(parámetro|comentario|marca|parameter|comment|mark)\s+(a|to)\b'
+  ChangeElementType:
+    patterns:
+      - '\b(cambia|modifica|change)\s+(el|la|the)?\s*tip[oa]\b'
+  RenameElements:
+    patterns:
+      - '\b(renombra|cambia\s+el\s+nombre|rename)\b'
+  MoveElement:
+    patterns:
+      - '\b(mueve|desplaza|move)\b'
+  RotateElement:
+    patterns:
+      - '\b(rota|gira|vira|rotate)\b'
+  PinElements:
+    patterns:
+      - '\b(fija|bloquea|pin|lock)\b'
+  UnpinElements:
+    patterns:
+      - '\b(desbloquea|desfija|unpin|unlock)\b'
+  DeleteElements:
+    patterns:
+      - '\b(borra|elimina|quita|suprime|delete|remove)\b'
+  DuplicateType:
+    patterns:
+      - '\b(duplica|clona|duplicate|clone)\s+(el|la|the)?\s*tip[oa]\b'
+  JoinGeometry:
+    patterns:
+      - '\b(une|junta|unir|join)\s+(la|the)?\s*geometr(í|i)a\s'
+  ChangeElementVisibility:
+    patterns:
+      - '\b(oculta|apaga|esconde|hide)\b'
+      - '\b(muestra|enciende|visibiliza|unhide|show)\b'
+
+  # --- INTENCIONES DE CONSULTA Y GESTIÓN ---
+  QueryElements:
+    patterns:
+      - '\b(cuántos|cuántas|lista|dime|encuentra|selecciona|busca|get|how\s+many|list|find|select)\b'
+      - '\b(seleccionar)\s+tod[oa]s\s+l[oa]s\b'
+  ExportFile:
+    patterns:
+      - '\b(exporta|export)\b'
+  SyncWithCentral:
+    patterns:
+      - '\b(sincroniza|sync)\b'
+
+  # --- INTENCIONES GENÉRICAS (FALLBACK) ---
+  # Se evalúan al final si nada de lo anterior coincide.
+  Query:
+    patterns:
+      - '\b(qué|cuál|dónde|what|which|where)\b'
+  Modify:
+    patterns:
+      - '\b(modifica|ajusta|cambia|modify|adjust|change)\b'
+  Create:
+    patterns:
+      - '\b(crea|genera|dibuja|construye|create|generate|draw|build)\b'
