@@ -159,6 +159,7 @@ INTENT_SLOTS_MAPPING = {
 def extract_slots(text: str, intent: str) -> dict:
     """
     Extrae las entidades (slots) relevantes de un texto, basado en una intención dada.
+    Siempre devuelve los valores de los slots como una lista.
     """
     relevant_slot_names = INTENT_SLOTS_MAPPING.get(intent, [])
     if not relevant_slot_names:
@@ -170,31 +171,33 @@ def extract_slots(text: str, intent: str) -> dict:
     for slot_name in relevant_slot_names:
         pattern = ALL_SLOTS_PATTERNS.get(slot_name)
         if not pattern:
-            print(f"Advertencia: El slot '{slot_name}' definido en el mapeo no tiene un patrón en patterns.yml.")
+            # Esta advertencia es útil durante el desarrollo
+            # print(f"Advertencia: El slot '{slot_name}' definido en el mapeo no tiene un patrón en patterns.yml.")
             continue
 
         matches = re.findall(pattern, text, re.IGNORECASE)
         
         if matches:
+            # 'processed_matches' siempre será la lista final para este slot
             processed_matches = []
             for match in matches:
                 if isinstance(match, tuple):
-                    # Filtrar grupos vacíos de la tupla.
-                    # Ej: ('10', '.0', 'm') -> ['10.0', 'm']
-                    # Ej: ('10', '', 'm') -> ['10', 'm']
+                    # Limpia la tupla de grupos de captura vacíos (ej. de los OR en regex)
                     non_empty_groups = [group for group in match if group]
-                    if len(non_empty_groups) == 1:
+                    # Si la tupla limpia no está vacía, la añadimos.
+                    # A menudo, los patrones complejos capturan solo un valor real por tupla.
+                    if non_empty_groups:
+                        # Unimos los grupos si son parte de un número (ej. '10' y '.5')
+                        # Esta es una simplificación; por ahora, tomamos el primer grupo no vacío.
                         processed_matches.append(non_empty_groups[0])
-                    elif len(non_empty_groups) > 1:
-                        processed_matches.append(tuple(non_empty_groups))
                 else:
+                    # Si no es una tupla, es un string simple
                     processed_matches.append(match)
 
-            if len(processed_matches) == 1:
-                extracted_slots[slot_name] = processed_matches[0]
-            elif len(processed_matches) > 1:
-                 # Si encontramos múltiples valores para el mismo slot, los guardamos como una lista.
-                 # Ej: "unir muros y suelos" -> element_category: ['muros', 'suelos']
+            # ---- LA CORRECCIÓN CLAVE ESTÁ AQUÍ ----
+            # Si la lista de resultados no está vacía, la asignamos al slot.
+            # El valor siempre será una lista, ej: ['muro'] o ['muros', 'suelos']
+            if processed_matches:
                 extracted_slots[slot_name] = processed_matches
 
     return extracted_slots
