@@ -5,12 +5,16 @@ datasets>=2.0.0
 peft>=0.3.0
 bitsandbytes
 accelerate
+tensorboard
+tensorboardX
 
 #Revit-Agent/agent-revit-orchestrator/requirements.txt
 flask
 requests
 sentence-transformers
 faiss-cpu
+numpy
+pyyaml
 
 # Utilidades generales
 pandas

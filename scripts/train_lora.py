@@ -144,15 +144,15 @@ if __name__ == '__main__':
         warmup_ratio=0.1,
         lr_scheduler_type="cosine",
         optim="paged_adamw_8bit",
-        fp16=True, # Mantenemos el cambio a fp16 que funcionó
-        logging_dir=f"./logs/{output_dir_name}",
+        fp16=True, # Usamos fp16 por compatibilidad
+        logging_dir=f"./logs/{output_dir_name}", # Ruta de logging corregida
         logging_steps=25,
-        # Usamos los nombres compatibles con tu versión de transformers
         eval_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=2,
         load_best_model_at_end=True,
-        report_to="tensorboard"
+        report_to="tensorboard",
+        dataloader_pin_memory=False # Añadido para evitar bloqueos en Windows
     )
 
     trainer = Trainer(

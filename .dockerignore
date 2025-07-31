@@ -1,0 +1,24 @@
+# Ignorar el entorno virtual de Python
+.venv/
+tad-ai/
+__pycache__/
+
+# Ignorar archivos de configuración local y secretos
+.env
+*.local
+
+# Ignorar carpetas de caché y artefactos de construcción
+.cache/
+.vscode/
+.git/
+*.pyc
+
+# ¡MUY IMPORTANTE! Ignorar los modelos descargados y los logs de entrenamiento
+lora_revit_agent_*
+models/
+logs/
+
+# Ignorar el propio Dockerfile para no copiarse a sí mismo
+Dockerfile
+Dockerfile.train
+docker-compose.yml
