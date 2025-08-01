@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger("OrchestratorAgent")
 
 # Asumimos que el contenedor se inicia con la raíz del proyecto montada en /app
-REPO_ROOT = "/app" 
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 SHARED_LIBS_PATH = os.path.join(REPO_ROOT, 'shared_libs')
 sys.path.insert(0, REPO_ROOT)
 

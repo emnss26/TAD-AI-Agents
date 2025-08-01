@@ -20,3 +20,12 @@ tensorboardX
 
 # Dependencias secundarias
 huggingface-hub
+
+# --- Dependencias del Coder ---
+fastapi
+uvicorn[standard]
+torch
+
+# --- Dependencias del Orquestador ---
+flask
+requests

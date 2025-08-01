@@ -17,7 +17,8 @@ HF_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
 
 # Rutas al modelo base y a tu adaptador LoRA entrenado
 BASE_MODEL_NAME = "meta-llama/CodeLlama-7b-instruct-hf"
-LORA_PATH = "./lora_revit_agent_codellama_v1" # La ruta es relativa a la raíz del proyecto
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+LORA_PATH = "/app/lora_revit_agent_codellama_v1" # La ruta es relativa a la raíz del proyecto
 
 app = FastAPI()
 model = None # Inicializamos el modelo como None
