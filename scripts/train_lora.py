@@ -147,8 +147,8 @@ if __name__ == '__main__':
         fp16=True, # Usamos fp16 por compatibilidad
         logging_dir=f"./logs/{output_dir_name}", # Ruta de logging corregida
         logging_steps=25,
-        eval_strategy="epoch",
-        save_strategy="epoch",
+        evaluation_strategy="epoch",
+        save_strategy="epoch", 
         save_total_limit=2,
         load_best_model_at_end=True,
         report_to="tensorboard",

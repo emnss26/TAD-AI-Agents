@@ -1,118 +1,108 @@
-# main (agent_server.py)
-import traceback
 import os
-import re
 import torch
-from fastapi import FastAPI, HTTPException
+import logging
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-
 from peft import PeftModel
+from dotenv import load_dotenv
 
-# --- 1. CONFIGURACIÓN ---
+# --- 0. Configuración del Logging ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("CoderAgent")
+
+# --- 1. CONFIGURACIÓN Y CARGA DE MODELO ---
+load_dotenv()
+HF_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
+
+# Rutas al modelo base y a tu adaptador LoRA entrenado
+BASE_MODEL_NAME = "meta-llama/CodeLlama-7b-instruct-hf"
+LORA_PATH = "./lora_revit_agent_codellama_v1" # La ruta es relativa a la raíz del proyecto
+
 app = FastAPI()
-BASE_MODEL = "microsoft/phi-2"
-# *** CAMBIO IMPORTANTE: Usamos el modelo que demostró ser más robusto ***
-LORA_PATH = "./lora_revit_agent_phi2_v7" 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"INFO: Usando dispositivo: {DEVICE}")
+model = None # Inicializamos el modelo como None
 
-# --- 2. CARGA DEL MODELO LoRA ---
-print("INFO: Cargando modelo base y tokenizer...")
-quant_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_use_double_quant=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16)
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
-tokenizer.pad_token = tokenizer.eos_token
-base_model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, quantization_config=quant_config, device_map="auto", trust_remote_code=True)
-print(f"INFO: Cargando adaptador LoRA desde {LORA_PATH}...")
-model = PeftModel.from_pretrained(base_model, LORA_PATH)
-model.eval()
-print("INFO: Modelo de Élite listo para inferencia.")
+@app.on_event("startup")
+def load_model():
+    """
+    Carga el modelo y el tokenizer al iniciar la aplicación.
+    Esto evita la carga en frío en la primera petición.
+    """
+    global model, tokenizer
+    
+    logger.info("Iniciando la carga del modelo en el evento de startup...")
+    
+    # Configuración de cuantización
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16
+    )
 
-# --- 3. LÓGICA DE LIMPIEZA QUIRÚRGICA ---
-def surgical_clean_code(raw_text: str) -> str:
-    """
-    Función de post-procesamiento definitiva para aislar únicamente el código C#.
-    """
-    # Corregir problemas de codificación comunes primero
+    logger.info(f"Cargando modelo base '{BASE_MODEL_NAME}'...")
     try:
-        text = raw_text.encode('latin-1').decode('utf-8')
-    except UnicodeDecodeError:
-        text = raw_text
-    
-    # 1. Encontrar el inicio del código buscando palabras clave C#
-    code_starters = ["using ", "UIDocument ", "Level ", "WallType ", "string ", "double ", "List<", "FamilySymbol ", "Element ", "ICollection<"]
-    start_index = -1
-    for starter in code_starters:
-        index = text.find(starter)
-        if index != -1:
-            if start_index == -1 or index < start_index:
-                start_index = index
-    
-    if start_index == -1:
-        # Si no encontramos un inicio claro, no podemos limpiar de forma segura.
-        return f"// ERROR: No se encontró un punto de inicio de código C# válido en la salida del modelo.\n// Salida cruda: {text}"
+        base_model = AutoModelForCausalLM.from_pretrained(
+            BASE_MODEL_NAME,
+            quantization_config=quant_config,
+            device_map="auto",
+            trust_remote_code=True,
+            token=HF_TOKEN
+        )
 
-    code_block = text[start_index:]
-    
-    # 2. Encontrar el final del código balanceando las llaves {}
-    open_braces = 0
-    last_brace_index = -1
-    for i, char in enumerate(code_block):
-        if char == '{':
-            open_braces += 1
-        elif char == '}':
-            open_braces -= 1
-            if open_braces == 0:
-                last_brace_index = i
-                break # Encontramos el final del bloque principal
-    
-    if last_brace_index != -1:
-        return code_block[:last_brace_index + 1].strip()
-    else:
-        # Si no hay llaves (código de una línea o incompleto), devolvemos hasta el primer salto de línea.
-        return code_block.split('\n')[0].strip()
+        logger.info(f"Cargando tokenizer para '{BASE_MODEL_NAME}'...")
+        tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME, trust_remote_code=True, token=HF_TOKEN)
+        tokenizer.pad_token = tokenizer.eos_token
 
-# --- 4. LÓGICA DE LA APLICACIÓN ---
-class Prompt(BaseModel):
+        logger.info(f"Aplicando adaptador LoRA desde '{LORA_PATH}'...")
+        model = PeftModel.from_pretrained(base_model, LORA_PATH)
+        
+        # Fusionamos los pesos para una inferencia ~30% más rápida. 
+        # Esto consume un poco más de VRAM al inicio, pero vale la pena.
+        logger.info("Fusionando pesos de LoRA en el modelo base para optimizar la inferencia...")
+        model = model.merge_and_unload()
+        model.eval()
+        
+        logger.info("✅ Modelo de Élite listo para recibir peticiones.")
+    except Exception as e:
+        logger.error(f"CRÍTICO: Falló la carga del modelo o del adaptador LoRA. El agente no podrá procesar peticiones. Error: {e}", exc_info=True)
+        # El modelo se quedará como None, y la API devolverá un error.
+
+# --- 2. LÓGICA DE LA API ---
+class PromptRequest(BaseModel):
     prompt: str
 
-@app.get("/")
-async def root():
-    return {"message": "Agente de IA para Revit (Élite v3.0 - Modo Quirúrgico) está en funcionamiento."}
-
 @app.post("/predict")
-async def predict(body: Prompt):
+async def predict(request: Request, body: PromptRequest):
+    if not model:
+        raise HTTPException(status_code=503, detail="El modelo no está disponible o falló al cargar. Revise los logs del servidor.")
+    
     try:
-        # Usamos el formato que funcionó mejor con el modelo v7
-        full_prompt = f"### INSTRUCTION:\n{body.prompt.strip()}\n\n### RESPONSE:\n"
-        print(f"\n--- PROMPT ENVIADO AL MODELO ---\n{full_prompt}\n---------------------------------\n")
-
-        inputs = tokenizer(full_prompt, return_tensors="pt", return_attention_mask=True).to(DEVICE)
+        full_prompt = body.prompt
+        logger.info(f"Recibida petición. Longitud del prompt: {len(full_prompt)} caracteres.")
+        
+        inputs = tokenizer(full_prompt, return_tensors="pt").to(model.device)
 
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=512,
+                max_new_tokens=1024,
                 do_sample=True,
-                temperature=0.01,
+                temperature=0.05, # Muy bajo para respuestas deterministas y precisas
                 top_p=0.9,
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id
             )
-
-        raw_output = tokenizer.decode(outputs[0][inputs.input_ids.shape[-1]:], skip_special_tokens=True).strip()
         
-        # Usamos nuestra nueva función de limpieza
-        final_code = surgical_clean_code(raw_output)
+        response_text = tokenizer.decode(outputs[0][len(inputs.input_ids[0]):], skip_special_tokens=True)
         
-        print(f"\n--- CÓDIGO PURO GENERADO (LIMPIEZA QUIRÚRGICA) ---\n{final_code}\n---------------------------------\n")
-        return {"code": final_code}
+        logger.info(f"Respuesta generada con éxito. Longitud: {len(response_text)} caracteres.")
+        return {"code": response_text.strip()}
 
     except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error en el servidor del agente: {str(e)}")
+        logger.error(f"Error durante la inferencia: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
-# --- 5. PUNTO DE ENTRADA ---
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+@app.get("/")
+async def root():
+    return {"message": "Agente Coder (CodeLlama-7b-LoRA) está en funcionamiento."}

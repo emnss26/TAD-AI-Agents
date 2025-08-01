@@ -23,3 +23,7 @@ Revit-Agent/agent-revit-repos/
 Revit-Agent/agent-revit-rm/
 Revit-Agent/agent-revit-plugin/Revit_Agent_GPT_FT
 Revit-Agent/agent-revit-plugin/Revit_Api_Extractor
+
+# Ignorar artefactos de entrenamiento (modelos y logs)
+lora_revit_agent_*/
+logs/
