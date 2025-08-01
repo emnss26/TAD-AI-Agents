@@ -1,17 +1,18 @@
 FROM nvcr.io/nvidia/pytorch:24.01-py3
 
-# Establecemos el directorio de trabajo raíz
 WORKDIR /app
 
-# Copia los requisitos e instálalos
+# Copia los requisitos
 COPY requirements.txt .
+
+# Instala TODO desde el archivo de requisitos.
+# El pip dentro de este contenedor está optimizado para CUDA.
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia TODO el proyecto al contenedor
+# Copia el proyecto
 COPY . .
 
-# *** CAMBIO CLAVE ***
-# Nos movemos al directorio específico del agente
+# Establece el directorio de trabajo
 WORKDIR /app/Revit-Agent/agent-revit-coder
 
 EXPOSE 8000
