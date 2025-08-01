@@ -25,7 +25,7 @@ huggingface-hub
 # --- Dependencias del Coder ---
 fastapi
 uvicorn[standard]
-torch
+#torch
 
 # --- Dependencias del Orquestador ---
 flask
