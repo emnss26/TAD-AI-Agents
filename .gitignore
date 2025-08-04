@@ -1,29 +1,63 @@
-# Python venv
-.venv/
-__pycache__/
-*.pyc
+# --- Archivos de Configuración Local y Secretos ---
+# Ignorar siempre las variables de entorno que contienen secretos.
 .env
 
+# --- Entornos Virtuales y Dependencias de Python ---
+# Ignorar las carpetas de entornos virtuales de Conda y venv.
+/tad-ai/
+/tad-ai-v2/
+/tad-ai-v3/
+/tad-ai-v4/
+.venv/
 
-# VSCode
-.vscode/
+# Ignorar cachés de Python y archivos compilados.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-# Revit SDK y archivos demasiado largos
-Revit-Agent/agent-revit-repos/
-*.docx
-*.pdf
-
-# Otros binarios/librerías temporales
-*.log
-*.sqlite3
-*.db
-
-
-Revit-Agent/agent-revit-repos/
-Revit-Agent/agent-revit-rm/
-Revit-Agent/agent-revit-plugin/Revit_Agent_GPT_FT
-Revit-Agent/agent-revit-plugin/Revit_Api_Extractor
-
-# Ignorar artefactos de entrenamiento (modelos y logs)
+# --- Artefactos de Entrenamiento de IA ---
+# ¡CRUCIAL! Ignorar todas las carpetas de logs y de modelos entrenados.
+# Esto evita subir archivos muy pesados al repositorio.
+/logs/
 lora_revit_agent_*/
-logs/
+
+# Ignorar archivos de modelos individuales por si acaso.
+*.safetensors
+*.pt
+*.pth
+*.bin
+
+# --- Archivos del IDE y del Sistema Operativo ---
+# Archivos específicos de VS Code, JetBrains, etc. y del SO.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Archivos de Datos y Bases de Datos ---
+# Descomenta la siguiente línea si tus archivos .jsonl son muy grandes.
+# *.jsonl
+*.db
+*.sqlite3
+
+# --- Artefactos de Compilación de C# ---
+# Carpetas y archivos generados por Visual Studio y MSBuild.
+[Bb]in/
+[Oo]bj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# --- Documentación y Archivos Binarios ---
+# Ignorar PDFs o documentos de Word que no sean esenciales para el código.
+*.pdf
+*.docx
+
+# --- Carpetas de Proyectos Antiguos o Descartados ---
+# Mantener estas líneas para asegurar que las carpetas antiguas no vuelvan.
+/Revit-Agent/agent-revit-repos/
+/Revit-Agent/agent-revit-rm/
+/Revit-Agent/agent-revit-plugin/Revit_Agent_GPT_FT/
+/Revit-Agent/agent-revit-plugin/Revit_Api_Extractor/

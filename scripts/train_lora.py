@@ -1,10 +1,7 @@
-# scripts/train_lora.py (Versión con caché forzada por variable de entorno)
-
 import os
 import torch
 import functools
-import json
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -16,51 +13,45 @@ from transformers import (
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from dotenv import load_dotenv
 
-# --- Carga del Token de Autenticación (se mantiene igual) ---
+# --- 0. Carga de Token ---
 load_dotenv()
 HF_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
-if not HF_TOKEN:
-    print("ADVERTENCIA: No se encontró el token de Hugging Face en el archivo .env.")
-# ----------------------------------------
 
-# --- 1. DEFINICIÓN DE RUTAS Y MODELO ---
+# --- 1. CONFIGURACIÓN ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
 
 BASE_MODEL_NAME   = "meta-llama/CodeLlama-7b-instruct-hf"
-DATA_PATH         = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-orchestrator", "data", "train_data_rag_format_v2.jsonl") 
-OUTPUT_DIR        = os.path.join(REPO_ROOT, "lora_revit_agent_codellama_v1")
-# Ya no necesitamos definir CACHE_DIR aquí, la variable de entorno lo manejará.
+# ¡APUNTAMOS AL DATASET DE PLANTILLAS DE ALTA CALIDAD!
+DATA_PATH         = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data.jsonl")
+OUTPUT_DIR        = os.path.join(REPO_ROOT, "lora_revit_agent_codellama_v2") # Nueva versión del modelo
 
-# --- 2. FUNCIONES DE PROCESAMIENTO DE DATOS (se mantienen igual) ---
-def create_rag_prompt(example, tokenizer):
-    # ... (esta función no cambia)
-    user_request = example.get("USER_REQUEST", "")
-    intent = example.get("DETECTED_INTENT", "Unknown")
-    slots = example.get("EXTRACTED_SLOTS", {})
-    api_context = example.get("RELEVANT_API_CONTEXT", [])
-    completion = example.get("EXPECTED_COMPLETION", "")
-    prompt = "### INSTRUCTION:\n"
-    prompt += f"Based on the following user request and context, generate the C# code for the Revit API.\n"
-    prompt += f"- User Request: '{user_request}'\n"
-    if intent != "Unknown":
-        prompt += f"- Detected Intent: {intent}\n"
-    if slots:
-        prompt += f"- Extracted Parameters: {slots}\n"
-    if api_context:
-        prompt += "\n--- Relevant API Documentation (Context)---\n"
-        for item in api_context:
-            prompt += f"- {item}\n"
-        prompt += "--------------------------------------\n"
-    prompt += "Generate ONLY the C# code snippet. Do not add explanations or surrounding text."
-    prompt += "\n\n### RESPONSE:\n"
-    full_text = prompt + completion + tokenizer.eos_token
-    return full_text
+# --- 2. PROCESAMIENTO DE DATOS (Estilo phi-2, simple y directo) ---
+def format_prompt(example, tokenizer):
+    """
+    Crea el prompt en el formato simple que sabemos que funciona.
+    """
+    # Usamos los nombres de columna de tu 'base_train_data.jsonl'
+    prompt_text = example.get('prompt_template') or example.get('prompt')
+    completion_text = example.get('completion_template') or example.get('completion')
 
-def tokenize_dataset(tokenizer, batch):
-    # ... (esta función no cambia)
-    max_length = 1024 
-    formatted_texts = [create_rag_prompt(example, tokenizer) for example in batch]
+    return f"### INSTRUCTION:\n{prompt_text}\n\n### RESPONSE:\n{completion_text}{tokenizer.eos_token}"
+
+def tokenize_dataset(tokenizer, examples):
+    """
+    Tokeniza un batch de ejemplos.
+    """
+    max_length = 1024 # Damos más espacio para el código complejo
+    
+    # El 'examples' que viene de .map es un diccionario de listas
+    prompts = examples.get('prompt_template') or examples.get('prompt')
+    completions = examples.get('completion_template') or examples.get('completion')
+
+    formatted_texts = [
+        f"### INSTRUCTION:\n{p}\n\n### RESPONSE:\n{c}{tokenizer.eos_token}"
+        for p, c in zip(prompts, completions)
+    ]
+
     tokenized = tokenizer(
         formatted_texts,
         truncation=True,
@@ -72,7 +63,8 @@ def tokenize_dataset(tokenizer, batch):
 
 # --- FUNCIÓN PRINCIPAL DE ENTRENAMIENTO ---
 if __name__ == '__main__':
-    print(f"INFO: Iniciando entrenamiento con el modelo base: {BASE_MODEL_NAME}")
+    print(f"INFO: Iniciando re-entrenamiento con el modelo base: {BASE_MODEL_NAME}")
+    print(f"INFO: Usando dataset de plantillas: {DATA_PATH}")
     
     quant_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -81,12 +73,7 @@ if __name__ == '__main__':
         bnb_4bit_compute_dtype=torch.bfloat16
     )
 
-    # Ahora las librerías leerán la caché desde la variable de entorno HF_HOME
-    tokenizer = AutoTokenizer.from_pretrained(
-        BASE_MODEL_NAME, 
-        trust_remote_code=True,
-        token=HF_TOKEN
-    )
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME, trust_remote_code=True, token=HF_TOKEN)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
@@ -111,48 +98,50 @@ if __name__ == '__main__':
     model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
-    print(f"INFO: Cargando y procesando dataset RAG desde {DATA_PATH}...")
+    # --- Carga y Procesamiento del Dataset de Plantillas ---
     dataset = load_dataset("json", data_files=DATA_PATH, split="train")
     
-    def map_function(batch):
-        keys = batch.keys()
-        list_of_dicts = [dict(zip(keys, values)) for values in zip(*batch.values())]
-        return tokenize_dataset(tokenizer, list_of_dicts)
+    # Renombramos las columnas si es necesario para consistencia
+    if "prompt_template" in dataset.column_names:
+        dataset = dataset.rename_column("prompt_template", "prompt")
+    if "completion_template" in dataset.column_names:
+        dataset = dataset.rename_column("completion_template", "completion")
 
     tokenized_dataset = dataset.map(
-        map_function,
+        functools.partial(tokenize_dataset, tokenizer),
         batched=True,
         batch_size=100,
         remove_columns=dataset.column_names
     )
-
-    output_dir_name = os.path.basename(OUTPUT_DIR)
     
-    split_dataset = tokenized_dataset.train_test_split(test_size=0.05, seed=42)
+    split_dataset = tokenized_dataset.train_test_split(test_size=0.1, seed=42) # Usamos 10% para validación
     train_ds, eval_ds = split_dataset["train"], split_dataset["test"]
-    print(f"INFO: Dataset listo. Tamaño de entrenamiento: {len(train_ds)} | Tamaño de evaluación: {len(eval_ds)}")
+    print(f"INFO: Dataset de plantillas listo. Entrenamiento: {len(train_ds)} | Evaluación: {len(eval_ds)}")
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
+    output_dir_name = os.path.basename(OUTPUT_DIR)
+
+    # --- TrainingArguments Optimizados ---
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
-        num_train_epochs=3,
+        num_train_epochs=5, # Con datos de alta calidad, podemos entrenar un poco más
         learning_rate=1e-4,
         weight_decay=0.01,
         warmup_ratio=0.1,
         lr_scheduler_type="cosine",
         optim="paged_adamw_8bit",
-        fp16=True, # Usamos fp16 por compatibilidad
-        logging_dir=f"./logs/{output_dir_name}", # Ruta de logging corregida
-        logging_steps=25,
+        fp16=True,
+        logging_dir=f"./logs/{output_dir_name}",
+        logging_steps=10, # Logueamos más a menudo para ver el progreso
         evaluation_strategy="epoch",
-        save_strategy="epoch", 
+        save_strategy="epoch",
         save_total_limit=2,
         load_best_model_at_end=True,
         report_to="tensorboard",
-        dataloader_pin_memory=False # Añadido para evitar bloqueos en Windows
+        dataloader_pin_memory=False
     )
 
     trainer = Trainer(
@@ -165,15 +154,14 @@ if __name__ == '__main__':
     )
 
     print("\n" + "="*60)
-    print("🚀  INICIANDO ENTRENAMIENTO DE ÉLITE CON CodeLlama y RAG  🚀")
+    print("🚀  INICIANDO RE-ENTRENAMIENTO CON PLANTILLAS DE ALTA CALIDAD  🚀")
     print("="*60 + "\n")
     
     trainer.train()
 
-    print("\nINFO: Guardando el mejor adaptador LoRA...")
+    print("\nINFO: Guardando el mejor adaptador LoRA (v2)...")
     trainer.save_model(OUTPUT_DIR)
     
     print("\n" + "🏆"*10)
-    print(f"✅ ¡MISIÓN CUMPLIDA! El entrenamiento de nueva generación ha finalizado.")
-    print(f"✅ El mejor modelo está guardado en: './{OUTPUT_DIR}'")
+    print(f"✅ ¡RE-ENTRENAMIENTO COMPLETADO! El nuevo modelo está en: './{OUTPUT_DIR}'")
     print("🏆"*10)
