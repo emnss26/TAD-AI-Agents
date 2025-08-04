@@ -19,12 +19,12 @@ HF_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
 
 # --- 1. CONFIGURACIÓN ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 BASE_MODEL_NAME   = "meta-llama/CodeLlama-7b-instruct-hf"
 # ¡APUNTAMOS AL DATASET DE PLANTILLAS DE ALTA CALIDAD!
 DATA_PATH         = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data.jsonl")
-OUTPUT_DIR        = os.path.join(REPO_ROOT, "lora_revit_agent_codellama_v2") # Nueva versión del modelo
+OUTPUT_DIR        = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts", "lora_revit_agent_codellama_v3") # Nueva versión del modelo
 
 # --- 2. PROCESAMIENTO DE DATOS (Estilo phi-2, simple y directo) ---
 def format_prompt(example, tokenizer):

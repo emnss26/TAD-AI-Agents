@@ -30,6 +30,7 @@ lora_revit_agent_*/
 
 # --- Archivos del IDE y del Sistema Operativo ---
 # Archivos específicos de VS Code, JetBrains, etc. y del SO.
+.vs/
 .vscode/
 .idea/
 .DS_Store
@@ -61,3 +62,8 @@ Thumbs.db
 /Revit-Agent/agent-revit-rm/
 /Revit-Agent/agent-revit-plugin/Revit_Agent_GPT_FT/
 /Revit-Agent/agent-revit-plugin/Revit_Api_Extractor/
+
+# Ignora la carpeta completa donde guardamos todos los modelos y logs.
+/Revit-Agent/training_artifacts/
+/AutoCAD-Agent/training_artifacts/
+/Navisworks-Agent/training_artifacts/

@@ -27,7 +27,7 @@ HF_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
 
 # Rutas al modelo base (online) y al adaptador LoRA (local)
 BASE_MODEL_NAME = "meta-llama/CodeLlama-7b-instruct-hf"
-LORA_PATH = os.path.join(REPO_ROOT, "lora_revit_agent_codellama_v1")
+LORA_PATH = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts", "lora_revit_agent_codellama_v2")
 
 # --- 2. LÓGICA DE LA APP FASTAPI ---
 app = FastAPI()
