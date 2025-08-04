@@ -2,14 +2,14 @@ import os
 import json
 
 # --- CONFIGURACIÓN DE RUTAS FIJAS ---
-# Asume que este script está en Revit-Agent/scripts, y sube un nivel a Revit-Agent
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-# Directorio donde vive agent-revit-coder/data
-DATA_DIR = os.path.join(BASE_DIR, 'agent-revit-coder', 'data')
-# Entrada: carpeta o archivo .jsonl con los pares prompt/completion
-INPUT_DIR = os.path.join(DATA_DIR, 'base_train_data')
-# Salida: JSONL ya en formato meta-llama instruct
-OUTPUT_FILE = os.path.join(DATA_DIR, 'train_data_llama.jsonl')
+# Ahora subimos DOS niveles desde scripts/ para llegar a .../Revit-Agent
+SCRIPT_DIR = os.path.dirname(__file__)
+BASE_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
+# agent-revit-coder/data dentro de Revit-Agent
+DATA_DIR = os.path.join(BASE_DIR, 'Revit-Agent','agent-revit-coder', 'data')
+
+INPUT_DIR = os.path.join(DATA_DIR, 'base_train_data.jsonl')       # carpeta o archivo .jsonl de entrada
+OUTPUT_FILE = os.path.join(DATA_DIR, 'train_data_llama.jsonl')  # archivo de salida
 
 SYSTEM_PROMPT = (
     "You are an expert C# programmer for the Autodesk Revit API. "
@@ -34,15 +34,22 @@ def convert_jsonl(input_path, output_file):
     """
     with open(output_file, 'w', encoding='utf-8') as fout:
         # Recolecta todos los .jsonl
-        files = []
         if os.path.isdir(input_path):
-            for fname in sorted(os.listdir(input_path)):
-                if fname.lower().endswith('.jsonl'):
-                    files.append(os.path.join(input_path, fname))
+            files = [
+                os.path.join(input_path, fn)
+                for fn in sorted(os.listdir(input_path))
+                if fn.lower().endswith('.jsonl')
+            ]
         else:
             files = [input_path]
 
+        if not files:
+            raise FileNotFoundError(f"No se encontró ningún archivo .jsonl en '{input_path}'")
+
         for path in files:
+            if not os.path.isfile(path):
+                print(f"⚠️  Saltando (no existe): {path}")
+                continue
             with open(path, 'r', encoding='utf-8') as fin:
                 for line in fin:
                     line = line.strip()
@@ -57,8 +64,7 @@ def convert_jsonl(input_path, output_file):
                             prompt=prompt,
                             completion=completion
                         )
-                        json_line = json.dumps({'text': inst}, ensure_ascii=False)
-                        fout.write(json_line + '\n')
+                        fout.write(json.dumps({'text': inst}, ensure_ascii=False) + '\n')
                     except json.JSONDecodeError:
                         # Línea corrupta: la saltamos
                         continue
@@ -68,4 +74,4 @@ if __name__ == '__main__':
     print(f"Convirtiendo datos de '{INPUT_DIR}' a '{OUTPUT_FILE}'...")
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     convert_jsonl(INPUT_DIR, OUTPUT_FILE)
-    print("Conversión completada.")
+    print("✅ Conversión completada.")
