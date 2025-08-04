@@ -1,17 +1,18 @@
 using System;
-using System.CodeDom.Compiler;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.CodeDom.Compiler;
 using System.Web.Script.Serialization;
 using System.Runtime.InteropServices;
-using System.Collections.Generic;
 using Microsoft.CSharp;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 
-namespace RevitTemplateValidation
+namespace RevitApiValidation
 {
-    // Clase actualizada para coincidir con la estructura de template_data.jsonl
     class Template
     {
         public string prompt_template { get; set; }
@@ -21,111 +22,19 @@ namespace RevitTemplateValidation
 
     class Program
     {
-        // Diccionario de valores "mock" para reemplazar las variables de las plantillas.
-        static readonly Dictionary<string, string> MockData = new Dictionary<string, string>
+        // Mapeo de enums comunes a literales válidos de la API
+        static readonly Dictionary<string, string> EnumMapping = new Dictionary<string, string>
         {
-            // Nombres y Cadenas
-            { "level_name", "\"Mock Level\"" },
-            { "level_to_duplicate", "\"Mock Level\"" },
-            { "original_level_name", "\"Mock Level 1\"" },
-            { "new_level_name", "\"Mock Level 2\"" },
-            { "wall_type_name", "\"Mock Wall Type\"" },
-            { "original_name", "\"Original Name\"" },
-            { "new_name", "\"New Name\"" },
-            { "prefix", "\"PREFIX_\"" },
-            { "family_name", "\"Mock Family\"" },
-            { "room_name", "\"Mock Room\"" },
-            { "view_name", "\"Mock View\"" },
-            { "comment", "\"Mock Comment\"" },
-            { "door_type_name", "\"Mock Door Type\"" },
-            { "fire_rating", "\"60 min\"" },
-            { "fire_rating_value", "\"60 min\"" },
-            { "source_level", "\"Level 1\"" },
-            { "target_level", "\"Level 2\"" },
-            { "material_name", "\"Mock Material\"" },
-            { "workset_name", "\"Mock Workset\"" },
-            { "sheet_size", "\"A0\"" },
-            { "template_name", "\"New Mock Template\"" },
-            { "old_type_name", "\"Old Type Name\"" },
-            { "new_type_name", "\"New Type Name\"" },
-            { "mark_value", "\"M-01\"" },
-            { "level1_name", "\"Level 1\"" },
-            { "level2_name", "\"Level 2\"" },
-            { "type_name_substring", "\"Generic\"" },
-            { "parameter_name", "\"Comments\"" },
-            { "parameter_value", "\"Mock Value\"" },
-            { "text_to_find", "\"find_me\"" },
-            { "new_text", "\"replace_me\"" },
-            { "shape_name", "\"Mock Shape\"" },
-            { "sheet_number", "\"A-101\"" },
-            { "sheet_name", "\"Mock Sheet Name\"" },
-            { "description", "\"Mock Description\"" },
-            { "issued_by", "\"ML Engineer\"" },
-            { "date", "\"2024-01-01\"" },
-            { "buit_in_category_enum", "OST_Walls" }, // No necesita comillas, es un enum
-            { "built_in_category_enum", "OST_Walls" }, // Corregido typo
-            
-            // Números (doubles)
-            { "offset_m", "10.0" },
-            { "elevation_m", "15.0" },
-            { "thickness_mm", "150.0" },
-            { "sill_height_mm", "900.0" },
-            { "spacing_m", "5.0" },
-            { "sill_height_m", "1.0" },
-            { "height_m", "3.0" },
-            { "thickness_cm", "20.0" },
-            { "length_m", "10.0" },
-            { "angle_degrees", "45.0" },
-            { "width_m", "5.0" },
-            { "slope_percentage", "5.0" },
-            { "diameter_inch", "4.0" },
-            { "width_mm", "300.0" },
-            { "height_mm", "200.0" },
-            { "text_size_mm", "2.5" },
-            { "radius_m", "2.0" },
-            { "distance_m", "10.0" },
-            { "diameter_mm", "100.0" },
-            { "value_m", "1.0" },
-            { "size_m", "5.0" },
-
-            // Números (enteros)
-            { "num_worksets", "3" },
-            { "rows", "5" },
-            { "cols", "5" },
-            { "num_horizontal", "4" },
-            { "num_vertical", "6" },
-            { "num_grids", "5" },
-            { "color_r", "100" },
-            { "color_g", "150" },
-            { "color_b", "200" },
-            { "transparency_percent", "50" },
-            
-            // Coordenadas
-            { "x1", "0.0" }, { "y1", "0.0" }, { "z1", "0.0" },
-            { "x2", "10.0" }, { "y2", "10.0" }, { "z2", "0.0" },
-            { "eye_x_m", "50.0" }, { "eye_y_m", "-50.0" }, { "eye_z_m", "50.0" },
-            { "p1x_m", "0.0" }, { "p1y_m", "0.0" }, { "p1z_m", "3.0" },
-            { "p2x_m", "10.0" }, { "p2y_m", "0.0" }, { "p2z_m", "3.0" },
-            { "start_x", "0.0" }, { "start_y", "0.0" }, { "start_z", "0.0" },
-            { "end_x", "10.0" }, { "end_y", "10.0" }, { "end_z", "0.0" },
-            { "coord_x", "5.0" }, { "coord_y", "5.0" },
-            { "x_m", "5.0" }, { "y_m", "5.0" }, { "z_m", "3.0" },
-
-            // Enums
-            { "detail_level_enum", "\"Medium\"" }, // Se pasará como string para el Enum.Parse
-
-            // Casos especiales (no necesitan valor, se manejan por nombre)
-            { "coordinates", "" },
-            { "single_point", "" },
-            { "floor_size_m", "" },
-            { "duct_size_mm", "" }
+            { "detail_level_enum", "ViewDetailLevel.Fine" },
+            { "built_in_category_enum", "BuiltInCategory.OST_Walls" },
+            { "ifc_version_enum", "IFCVersion.IFC2x3" }
         };
 
         static void Main(string[] args)
         {
             if (args.Length < 3)
             {
-                Console.WriteLine("Uso: CompilationValidator_Templates.exe <input_templates.jsonl> <success_templates.jsonl> <failed_templates.jsonl>");
+                Console.WriteLine("Uso: TemplateValidator.exe <input.jsonl> <success.jsonl> <failed.jsonl> [<cleaned_success.jsonl> <cleaned_failed_full.jsonl>]");
                 return;
             }
 
@@ -133,119 +42,182 @@ namespace RevitTemplateValidation
             string successPath = args[1];
             string failedPath = args[2];
 
+            string cleanSuccPath = args.Length >= 4
+                ? args[3]
+                : Path.Combine(Path.GetDirectoryName(successPath) ?? string.Empty,
+                    Path.GetFileNameWithoutExtension(successPath) + ".cleaned" + Path.GetExtension(successPath));
+            string cleanFailedFull = args.Length >= 5
+                ? args[4]
+                : Path.Combine(Path.GetDirectoryName(failedPath) ?? string.Empty,
+                    Path.GetFileNameWithoutExtension(failedPath) + ".full" + Path.GetExtension(failedPath));
+
             string revitApiPath = @"C:\Program Files\Autodesk\Revit 2025\RevitAPI.dll";
             string revitApiUIPath = @"C:\Program Files\Autodesk\Revit 2025\RevitAPIUI.dll";
 
             var serializer = new JavaScriptSerializer();
             using var wSucc = new StreamWriter(successPath);
             using var wFail = new StreamWriter(failedPath);
+            using var wCleanSucc = new StreamWriter(cleanSuccPath);
+            using var wCleanFail = new StreamWriter(cleanFailedFull);
 
             foreach (var line in File.ReadLines(inputPath))
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
-                Template template;
-                try { template = serializer.Deserialize<Template>(line); }
+                Template tpl;
+                try { tpl = serializer.Deserialize<Template>(line); }
                 catch { continue; }
+                if (tpl == null || string.IsNullOrWhiteSpace(tpl.completion_template)) continue;
 
-                // PASO 1: Generar código sintético (mocked)
-                string mockedCode = GenerateMockedCode(template.completion_template, template.vars_needed, MockData);
-                string wrappedCode = WrapInExecutorClass(mockedCode);
+                // Genera código saneado con mocks y ajustes automáticos
+                string mockedCode = GenerateMockedCode(tpl.completion_template, tpl.vars_needed);
+                string wrapped = WrapInExecutorClass(mockedCode);
 
                 var prov = new CSharpCodeProvider();
-                var pars = new CompilerParameters
-                {
-                    GenerateExecutable = false,
-                    GenerateInMemory = true
-                };
+                var pars = new CompilerParameters { GenerateInMemory = true };
 
+                // Ensamblados .NET necesarios
                 pars.ReferencedAssemblies.Add("System.dll");
                 pars.ReferencedAssemblies.Add("System.Core.dll");
+                pars.ReferencedAssemblies.Add("System.Linq.dll");
                 pars.ReferencedAssemblies.Add("System.Web.Extensions.dll");
+
+                // Ensamblados Revit
                 pars.ReferencedAssemblies.Add(revitApiPath);
                 pars.ReferencedAssemblies.Add(revitApiUIPath);
-                
+
                 var runtimeDir = RuntimeEnvironment.GetRuntimeDirectory();
                 pars.ReferencedAssemblies.Add(Path.Combine(runtimeDir, "mscorlib.dll"));
                 pars.ReferencedAssemblies.Add(Path.Combine(runtimeDir, "System.Runtime.dll"));
 
-                // PASO 2: Compilar el código sintético
-                var results = prov.CompileAssemblyFromSource(pars, wrappedCode);
+                var results = prov.CompileAssemblyFromSource(pars, wrapped);
 
                 if (results.Errors.HasErrors)
                 {
-                    var errs = results.Errors
-                                  .Cast<CompilerError>()
-                                  .Select(e => $"{e.Line}:{e.ErrorNumber} {e.ErrorText}")
-                                  .ToArray();
-                    wFail.WriteLine(serializer.Serialize(new { prompt = template.prompt_template, completion = template.completion_template, errors = errs }));
+                    var errs = results.Errors.Cast<CompilerError>()
+                        .Select(e => $"{e.Line}:{e.ErrorNumber} {e.ErrorText}")
+                        .ToArray();
+                    wFail.WriteLine(serializer.Serialize(new { prompt = tpl.prompt_template, errors = errs }));
+                    wCleanFail.WriteLine(serializer.Serialize(new { prompt = tpl.prompt_template, completion = tpl.completion_template, errors = errs }));
                 }
                 else
                 {
-                    wSucc.WriteLine(line); // Escribir la línea original si tuvo éxito
+                    wSucc.WriteLine(serializer.Serialize(new { prompt = tpl.prompt_template, completion = tpl.completion_template }));
+                    wCleanSucc.WriteLine(serializer.Serialize(new { prompt = tpl.prompt_template, completion = tpl.completion_template }));
                 }
             }
 
-            Console.WriteLine("✅ Validación de Plantillas completada.");
-            Console.WriteLine($"  Éxitos:   {successPath}");
-            Console.WriteLine($"  Fallidos: {failedPath}");
+            Console.WriteLine("✅ Validación completada.");
         }
-        
-        static string GenerateMockedCode(string templateCode, List<string> vars, Dictionary<string, string> mockData)
+
+        static string GenerateMockedCode(string templateCode, List<string> vars)
         {
-            if (vars == null || !vars.Any())
+            if (string.IsNullOrEmpty(templateCode))
+                return string.Empty;
+
+            // Eliminar interpolaciones C# para evitar '$"...{var}...'"
+            templateCode = Regex.Replace(templateCode, @"\$@?\""", "\"");
+
+            var sb = new StringBuilder();
+            string code = templateCode;
+
+            if (vars != null)
             {
-                return templateCode;
+                foreach (var name in vars.Distinct())
+                {
+                    // Enum mapeados a literales reales, inline sin var
+                    if (EnumMapping.TryGetValue(name, out var enumVal))
+                    {
+                        code = code.Replace("{" + name + "}", enumVal);
+                        continue;
+                    }
+
+                    string decl;
+                    var low = name.ToLowerInvariant();
+
+                    // Prefix como string
+                    if (low == "prefix")
+                    {
+                        decl = $"var {name} = \"{name}_\";";
+                    }
+                    // Bytes para colores RGB
+                    else if (low.EndsWith("_r") || low.EndsWith("_g") || low.EndsWith("_b"))
+                    {
+                        decl = $"var {name} = (byte)1;";
+                    }
+                    // Porcentajes como int
+                    else if (low.Contains("percent"))
+                    {
+                        decl = $"var {name} = 1;";
+                    }
+                    // Conteos como int
+                    else if (low.StartsWith("num_") || low == "rows" || low == "cols")
+                    {
+                        decl = $"var {name} = 1;";
+                    }
+                    // Strings y nombres
+                    else if (low.Contains("name") || low.Contains("comment") || low.Contains("material") || low.Contains("family") || low.Contains("type"))
+                    {
+                        decl = $"var {name} = \"Mock_{name}\";";
+                    }
+                    // Por defecto double
+                    else
+                    {
+                        decl = $"var {name} = 1.0;";
+                    }
+
+                    sb.AppendLine(decl);
+                    code = code.Replace("{" + name + "}", name);
+                }
             }
 
-            string currentCode = templateCode;
-            foreach (var varName in vars)
-            {
-                if (mockData.ContainsKey(varName))
-                {
-                    // Reemplaza {variable} con su valor mock
-                    currentCode = currentCode.Replace("{" + varName + "}", mockData[varName]);
-                }
-                else
-                {
-                    // Fallback para variables no definidas en el diccionario
-                    currentCode = currentCode.Replace("{" + varName + "}", "\"UNMAPPED_VARIABLE\"");
-                }
-            }
-            return currentCode;
+            // Ajustar FilteredElementCollector para soportar LINQ
+            code = Regex.Replace(code,
+                @"\.OfClass\(typeof\((\w+)\)\)",
+                ".OfClass(typeof($1)).Cast<$1>()",
+                RegexOptions.IgnoreCase);
+
+            // Fallback para cualquier placeholder restante
+            code = Regex.Replace(code, @"\{\w+\}", "1.0");
+
+            sb.AppendLine();
+            sb.AppendLine(code);
+            return sb.ToString();
         }
 
         static string WrapInExecutorClass(string rawCode)
         {
-            rawCode = rawCode.Replace("UIDocument uidoc =", "UIDocument localUidoc =");
-            rawCode = rawCode.Replace("uidoc.", "localUidoc.");
+            if (string.IsNullOrEmpty(rawCode))
+                return rawCode;
 
-            var w = new StringWriter();
-            w.WriteLine("using Autodesk.Revit.DB;");
-            w.WriteLine("using Autodesk.Revit.DB.Structure;");
-            w.WriteLine("using Autodesk.Revit.DB.Plumbing;");
-            w.WriteLine("using Autodesk.Revit.DB.Electrical;");
-            w.WriteLine("using Autodesk.Revit.DB.Mechanical;");
-            w.WriteLine("using Autodesk.Revit.DB.Architecture;");
-            w.WriteLine("using Autodesk.Revit.UI;");
-            w.WriteLine("using Autodesk.Revit.UI.Selection;");
-            w.WriteLine("using System;");
-            w.WriteLine("using System.Collections.Generic;");
-            w.WriteLine("using System.Linq;");
-            w.WriteLine("using System.IO;"); // Añadido para Path y File
-            w.WriteLine();
-            w.WriteLine("namespace DynamicCode");
-            w.WriteLine("{");
-            w.WriteLine("    public class Executor");
-            w.WriteLine("    {");
-            w.WriteLine("        public void Run(UIDocument uidoc, Document doc)");
-            w.WriteLine("        {");
-            w.WriteLine("            UIDocument localUidoc = uidoc;"); // Declarar localUidoc para que esté disponible
-            w.WriteLine("            // Código IA inyectado:");
-            w.WriteLine(rawCode);
-            w.WriteLine("        }");
-            w.WriteLine("    }");
-            w.WriteLine("}");
-            return w.ToString();
+            // Evitar redeclaraciones de uidoc
+            rawCode = Regex.Replace(rawCode, @"UIDocument\s+uidoc\s*=.*?;", "// uidoc proporcionado");
+
+            var sb = new StringBuilder();
+            sb.AppendLine("using System;");
+            sb.AppendLine("using System.Linq;");
+            sb.AppendLine("using System.Collections.Generic;");
+            sb.AppendLine("using System.Text;");
+            sb.AppendLine("using Autodesk.Revit.DB;");
+            sb.AppendLine("using Autodesk.Revit.DB.Structure;");
+            sb.AppendLine("using Autodesk.Revit.DB.Plumbing;");
+            sb.AppendLine("using Autodesk.Revit.DB.Electrical;");
+            sb.AppendLine("using Autodesk.Revit.DB.Mechanical;");
+            sb.AppendLine("using Autodesk.Revit.DB.Architecture;");
+            sb.AppendLine("using Autodesk.Revit.UI;");
+            sb.AppendLine("using Autodesk.Revit.UI.Selection;");
+            sb.AppendLine();
+            sb.AppendLine("namespace DynamicCode");
+            sb.AppendLine("{");
+            sb.AppendLine("    public class Executor");
+            sb.AppendLine("    {");
+            sb.AppendLine("        public void Run(UIDocument uidoc, Document doc)");
+            sb.AppendLine("        {");
+            sb.AppendLine(rawCode);
+            sb.AppendLine("            using (Transaction t = new Transaction(doc, \"Regenerate\")) { t.Start(); doc.Regenerate(); t.Commit(); }");
+            sb.AppendLine("        }");
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+            return sb.ToString();
         }
     }
 }
