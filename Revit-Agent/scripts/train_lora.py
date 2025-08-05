@@ -1,120 +1,84 @@
 import os
-import torch
-from datasets import load_dataset
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    TrainingArguments,
-    Trainer,
-    BitsAndBytesConfig,
-    DataCollatorForLanguageModeling,
-)
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+import json
+import random
+import torch  # <-- ESTA ES LA LÍNEA MÁS IMPORTANTE
+from transformers import pipeline
 from dotenv import load_dotenv
 
-# --- 0. Carga de credenciales ---
+# --- CONFIGURACIÓN ---
 load_dotenv()
 HF_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
 
-# --- 1. RUTAS Y MODELO BASE ---
-REPO_ROOT      = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-BASE_MODEL     = "meta-llama/CodeLlama-7b-instruct-hf"
-DATA_PATH      = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_llama.jsonl")
-OUTPUT_DIR     = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts", "lora_revit_agent_codellama_v4")
+# Modelo para generar las variantes. Usamos el mismo Mistral base, es excelente para esto.
+GENERATOR_MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
+NUM_VARIANTS_PER_TEMPLATE = 12 # Generaremos ~10,200 ejemplos (850 * 12)
+REPO_ROOT  = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+# Asegúrate de que el nombre del archivo de entrada sea el correcto
+INPUT_FILE = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "base_training_template.jsonl") 
+OUTPUT_FILE = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "templates_with_semantic_variants.jsonl")
 
-# --- 2. Tokenizer y Modelo (4-bit + LoRA) ---
-quant_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.bfloat16,
-)
-tokenizer = AutoTokenizer.from_pretrained(
-    BASE_MODEL, trust_remote_code=True, use_auth_token=HF_TOKEN
-)
-tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = "right"
+# --- LÓGICA ---
+def generate_variants(prompt, generator, num_variants=5):
+    system_prompt = "You are an expert in paraphrasing technical instructions for software. Generate multiple, distinct ways of asking for the same thing. Do not change the placeholders like {variable_name}. Respond ONLY with the list of paraphrased prompts, separated by newlines. Do not add numbering or explanations."
+    
+    chat = [
+        {"role": "user", "content": f"{system_prompt}\n\nOriginal instruction: \"{prompt}\"\n\nGenerate {num_variants} variations:"}
+    ]
+    
+    formatted_prompt = generator.tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+    outputs = generator(formatted_prompt, max_new_tokens=512, num_return_sequences=1, do_sample=True, temperature=0.7, top_k=50, top_p=0.95)
+    
+    generated_text = outputs[0]["generated_text"]
+    response = generated_text.split("[/INST]")[-1].strip()
+    
+    # Filtro de calidad para asegurar que las variantes son útiles
+    variants = [v.strip() for v in response.split('\n') if v.strip() and '{' in v and '}' in v]
+    return variants
 
-model = AutoModelForCausalLM.from_pretrained(
-    BASE_MODEL,
-    quantization_config=quant_config,
-    device_map="auto",
-    trust_remote_code=True,
-    use_auth_token=HF_TOKEN,
-)
-model.config.use_cache = False
-model = prepare_model_for_kbit_training(model)
+def main():
+    print(f"Cargando el modelo generador: {GENERATOR_MODEL}...")
+    # Forzar el uso de la GPU 0 (que para PyTorch es la RTX 4060)
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0" 
+    
+    # Verificar que estamos en la GPU correcta
+    if torch.cuda.is_available():
+        print(f"✅ Usando GPU para la generación: {torch.cuda.get_device_name(0)}")
+    
+    generator = pipeline("text-generation", model=GENERATOR_MODEL, device=0, token=HF_TOKEN, torch_dtype=torch.bfloat16)
+    print("✅ Modelo cargado.")
 
-lora_cfg = LoraConfig(
-    r=16,
-    lora_alpha=32,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-    lora_dropout=0.05,
-    bias="none",
-    task_type="CAUSAL_LM",
-)
-model = get_peft_model(model, lora_cfg)
-model.print_trainable_parameters()
+    all_templates = []
+    with open(INPUT_FILE, 'r', encoding='utf-8') as f:
+        for line in f:
+            all_templates.append(json.loads(line))
 
-# --- 3. Cargar y tokenizar el dataset ---
-ds = load_dataset("json", data_files=DATA_PATH, split="train")
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f_out:
+        for i, template in enumerate(all_templates):
+            original_prompt = template["prompt_template"]
+            
+            all_prompts = {original_prompt}
+            
+            print(f"[{i+1}/{len(all_templates)}] Generando variantes para: \"{original_prompt}\"")
+            
+            # No generar variantes para prompts vacíos o sin placeholders
+            if not original_prompt or '{' not in original_prompt:
+                print("  -> Omitiendo, no es una plantilla parametrizada.")
+            else:
+                try:
+                    variants = generate_variants(original_prompt, generator, num_variants=NUM_VARIANTS_PER_TEMPLATE - 1)
+                    all_prompts.update(variants)
+                except Exception as e:
+                    print(f"  ⚠️ Error generando variantes: {e}. Usando solo el original.")
 
-def tokenize_fn(batch):
-    tok = tokenizer(
-        batch["text"],
-        max_length=1024,
-        truncation=True,
-        padding="max_length",
-    )
-    # Para causal LM, labels = input_ids
-    tok["labels"] = tok["input_ids"].copy()
-    return tok
+            for p in all_prompts:
+                new_record = {
+                    "prompt_template": p,
+                    "completion_template": template["completion_template"],
+                    "vars_needed": template["vars_needed"]
+                }
+                f_out.write(json.dumps(new_record, ensure_ascii=False) + '\n')
+    
+    print(f"\n✅ Proceso completado. Archivo con variantes semánticas guardado en: {OUTPUT_FILE}")
 
-tokenized = ds.map(
-    tokenize_fn,
-    batched=True,
-    remove_columns=ds.column_names,
-)
-
-# hacer split train/valid
-split = tokenized.train_test_split(test_size=0.1, seed=42)
-train_ds, eval_ds = split["train"], split["test"]
-print(f"Train examples: {len(train_ds)},  Eval examples: {len(eval_ds)}")
-
-data_collator = DataCollatorForLanguageModeling(
-    tokenizer=tokenizer, mlm=False
-)
-
-# --- 4. TrainingArguments y Trainer ---
-training_args = TrainingArguments(
-    output_dir=OUTPUT_DIR,
-    per_device_train_batch_size=2,
-    gradient_accumulation_steps=4,
-    num_train_epochs=3,
-    learning_rate=2e-4,
-    weight_decay=0.01,
-    warmup_ratio=0.03,
-    optim="paged_adamw_8bit",
-    fp16=True,
-    logging_steps=20,
-    evaluation_strategy="epoch",
-    save_strategy="epoch",
-    save_total_limit=2,
-    load_best_model_at_end=True,
-    report_to="tensorboard",
-)
-
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_ds,
-    eval_dataset=eval_ds,
-    data_collator=data_collator,
-)
-
-# --- 5. Lanzar entrenamiento ---
 if __name__ == "__main__":
-    print("🚀 Iniciando fine-tune LoRA sobre CodeLlama …")
-    trainer.train()
-    trainer.save_model(OUTPUT_DIR)
-    print(f"✅ Modelo guardado en {OUTPUT_DIR}")
+    main()

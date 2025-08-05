@@ -1,6 +1,6 @@
 import os
 import torch
-from datasets import load_dataset, Dataset
+from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -9,23 +9,22 @@ from transformers import (
     BitsAndBytesConfig,
     DataCollatorForLanguageModeling,
 )
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model
 from dotenv import load_dotenv
 
 def run_training():
     # --- 1. Configuración ---
     load_dotenv()
     HF_TOKEN = os.getenv("HUGGING_FACE_TOKEN")
-
-    # Verificación: Asegurarse de que solo hay una GPU visible (ahora la 5060 Ti)
-    assert torch.cuda.device_count() == 2, "Error: Se detecta más de una GPU. Asegúrate de haber deshabilitado la RTX 4060."
-    print(f"✅ ¡A toda máquina! Enfocando el poder en la única GPU visible: {torch.cuda.get_device_name(0)}")
+    print(f"✅ Multi-GPU: {torch.cuda.device_count()} GPUs detectadas por PyTorch.")
+    for i in range(torch.cuda.device_count()):
+        print(f"  - GPU {i}: {torch.cuda.get_device_name(i)}")
 
     # --- 2. Rutas y Modelo Base ---
     REPO_ROOT  = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     BASE_MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
     DATA_PATH  = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_mistral.jsonl")
-    OUTPUT_DIR = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts", "lora_revit_agent_mistral_v1_RTX5060Ti")
+    OUTPUT_DIR = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts", "lora_revit_agent_mistral_v1_MultiGPU_Final")
 
     # --- 3. Preparar Tokenizer y Modelo ---
     quant_config = BitsAndBytesConfig(
@@ -48,9 +47,9 @@ def run_training():
         token=HF_TOKEN
     )
 
+    # MEJORA CLAVE v22: Habilitar gradient checkpointing de la manera recomendada y compatible
+    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     model.config.use_cache = False
-    model = prepare_model_for_kbit_training(model)
-    model.gradient_checkpointing_enable()
 
     lora_cfg = LoraConfig(
         r=16, lora_alpha=32,
@@ -73,16 +72,19 @@ def run_training():
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-    # --- 5. Configurar y Lanzar el Trainer para la 5060 Ti ---
+    # --- 5. Configurar y Lanzar el Trainer ---
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=4,   # MEJORA: Aumentado a 4 para los 16GB de VRAM
-        gradient_accumulation_steps=4, # MEJORA: Batch efectivo de 16 (4x4)
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=4,
         num_train_epochs=3,
         learning_rate=2e-4,
-        optim="paged_adamw_8bit",
+        optim="paged_adamw_8bit", # Volvemos al optimizador por defecto de QLoRA
         fp16=True,
         logging_steps=10,
+        # MEJORA CLAVE v22: Sincronizar los argumentos con la llamada al modelo
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         evaluation_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=2,
@@ -95,15 +97,10 @@ def run_training():
         eval_dataset=eval_ds, data_collator=data_collator,
     )
     
-    memoria_asignada = torch.cuda.memory_allocated(0) / 1024**3
-    memoria_reservada = torch.cuda.memory_reserved(0) / 1024**3
-    print(f"📈 Memoria VRAM antes de entrenar: {memoria_asignada:.2f}GB asignada / {memoria_reservada:.2f}GB reservada")
-
-    print(f"🚀 Iniciando fine-tune LoRA en la RTX 5060 Ti...")
+    print(f"🚀 Iniciando fine-tune Multi-GPU ESTABLE con Mistral-7B...")
     trainer.train()
     trainer.save_model(OUTPUT_DIR)
     print(f"✅ Entrenamiento completado. Modelo guardado en {OUTPUT_DIR}")
 
-# Proteger la ejecución para Windows
 if __name__ == "__main__":
     run_training()

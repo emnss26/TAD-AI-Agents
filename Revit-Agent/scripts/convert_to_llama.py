@@ -23,7 +23,9 @@ TEMPLATE = (
     "{system}\n"
     "<</SYS>>\n\n"
     "{prompt} [/INST]\n"
-    "{completion}</s>"
+    "{completion}\n"
+    "### END\n"
+    "</s>"
 )
 
 
