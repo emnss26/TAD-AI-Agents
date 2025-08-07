@@ -65,5 +65,6 @@ Thumbs.db
 
 # Ignora la carpeta completa donde guardamos todos los modelos y logs.
 /Revit-Agent/training_artifacts/
+/Revit-Agent/training_artifacts_linux/
 /AutoCAD-Agent/training_artifacts/
 /Navisworks-Agent/training_artifacts/

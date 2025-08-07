@@ -26,7 +26,7 @@ def run_training():
     
     # Apuntamos al dataset legacy MIXTO
     DATA_PATH  = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_phi2_legacy_mixed.jsonl")
-    OUTPUT_DIR = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts", "lora_revit_agent_phi3_v1_mixed_P71")
+    OUTPUT_DIR = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts_linux", "lora_revit_agent_phi3_v1_mixed_P71")
 
     # --- 3. Cargar Modelo y Tokenizer con Unsloth ---
     model, tokenizer = FastLanguageModel.from_pretrained(
