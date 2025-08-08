@@ -27,7 +27,7 @@ def run_training():
     
     # Apuntamos a nuestro dataset explícito para Mistral
     DATA_PATH  = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_mistral_explicit.jsonl")
-    OUTPUT_DIR = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts", "lora_revit_agent_mistral_v3_explicit")
+    OUTPUT_DIR = os.path.join(REPO_ROOT, "Revit-Agent", "training_artifacts", "lora_revit_agent_mistral_v4_explicit")
 
     # --- 3. Preparar Tokenizer y Modelo ---
     quant_config = BitsAndBytesConfig(
@@ -56,8 +56,8 @@ def run_training():
     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
     lora_cfg = LoraConfig(
-        r=16, 
-        lora_alpha=32,
+        r=32, 
+        lora_alpha=64,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
         lora_dropout=0.05, 
         bias="none", 
@@ -91,8 +91,10 @@ def run_training():
         output_dir=OUTPUT_DIR,
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4, # Batch efectivo de 8
-        num_train_epochs=2, # AJUSTE: Empezamos con 2 épocas para evitar sobreajuste y obtener resultados más rápido
-        learning_rate=2e-4,
+        num_train_epochs=4, # AJUSTE: Empezamos con 2 épocas para evitar sobreajuste y obtener resultados más rápido
+        learning_rate=5e-5,
+        warmup_steps=100,
+        weight_decay=0.01,
         optim="paged_adamw_8bit",
         fp16=True,
         logging_steps=20,

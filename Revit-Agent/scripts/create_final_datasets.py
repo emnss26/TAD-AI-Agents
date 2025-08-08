@@ -3,22 +3,18 @@ import os
 import random
 import re
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURACIÓN (sin cambios) ---
 REPO_ROOT  = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 INPUT_FILE = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "templates_with_semantic_variants.jsonl")
-
-# Archivos de salida
 MISTRAL_EXPLICIT_OUT = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_mistral_explicit.jsonl")
 MISTRAL_MIXED_OUT = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_mistral_mixed.jsonl")
 PHI3_EXPLICIT_OUT = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_phi3_explicit.jsonl")
 PHI3_MIXED_OUT = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_phi3_mixed.jsonl")
-
-# *** LÍNEAS CORREGIDAS ***
 PHI2_LEGACY_EXPLICIT_OUT = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_phi2_legacy_explicit.jsonl")
 PHI2_LEGACY_MIXED_OUT = os.path.join(REPO_ROOT, "Revit-Agent", "agent-revit-coder", "data", "train_data_phi2_legacy_mixed.jsonl")
 
-# Número de variantes explícitas a generar por cada plantilla semántica
 NUM_EXPLICIT_VARIANTS = 4
+
 
 # MEJORA: DATA_POOLS masivo y completo basado en tu inventario.
 DATA_POOLS = {
@@ -115,35 +111,38 @@ DATA_POOLS = {
 
 # Lógica inspirada en tu validador de C#
 def get_random_value(var_name):
+    # ... (sin cambios)
+    if var_name in DATA_POOLS: return random.choice(DATA_POOLS[var_name])
     low = var_name.lower()
-    
-    # Intenta encontrar un pool de datos específico primero
-    if var_name in DATA_POOLS:
-        return random.choice(DATA_POOLS[var_name])
-    
-    # Si no, aplica reglas como en tu validador
     if any(s in low for s in ["name", "comment", "material", "family", "type", "prefix", "text", "path", "prompt", "content"]):
         return f"Mock_{var_name.replace('_', ' ').title().replace(' ', '')}_{random.randint(1, 100)}"
     if any(s in low for s in ["percent", "num", "rows", "cols", "color"]):
         return random.randint(1, 100)
-    
-    # Por defecto, un número decimal (double)
     return round(random.uniform(1.0, 50.0), 2)
 
+# MEJORA CLAVE v2.6: La función de relleno más robusta hasta la fecha.
 def fill_template(prompt, completion, variables):
-    replacements = {}
-    for var in variables:
-        replacements[var] = get_random_value(var)
     
-    # El método de reemplazo manual es más seguro para ambos
+    # Paso 1: Encontrar todos los placeholders que existen en CUALQUIERA de los dos strings.
+    placeholders_in_prompt = set(re.findall(r'\{(\w+)\}', prompt))
+    placeholders_in_completion = set(re.findall(r'\{(\w+)\}', completion))
+    all_placeholders = placeholders_in_prompt.union(placeholders_in_completion)
+
+    # Paso 2: Generar valores aleatorios para cada placeholder encontrado.
+    replacements = {}
+    for var in all_placeholders:
+        replacements[var] = get_random_value(var)
+
+    # Paso 3: Reemplazar de forma segura en ambos strings.
     filled_prompt = prompt
     filled_completion = completion
     
     for var, value in replacements.items():
-        # Asegurarse de que el valor sea un string para el reemplazo
         str_value = str(value)
-        filled_prompt = filled_prompt.replace(f"{{{var}}}", str_value)
-        filled_completion = filled_completion.replace(f"{{{var}}}", str_value)
+        placeholder = f"{{{var}}}"
+        
+        filled_prompt = filled_prompt.replace(placeholder, str_value)
+        filled_completion = filled_completion.replace(placeholder, str_value)
         
     return filled_prompt, filled_completion
 
@@ -175,22 +174,20 @@ def main():
 
             prompt_tpl, completion_tpl, vars_needed = tpl.get("prompt_template", ""), tpl.get("completion_template", ""), tpl.get("vars_needed", [])
             
-            # --- Escribir en los archivos MIXED (versión con placeholders) ---
+            # --- MIXED (con placeholders) ---
             f_mm.write(json.dumps({"text": format_for_model(prompt_tpl, completion_tpl, 'mistral')}) + '\n')
             f_pm.write(json.dumps({"text": format_for_model(prompt_tpl, completion_tpl, 'phi3')}) + '\n')
             f_plm.write(json.dumps({"prompt": prompt_tpl, "completion": completion_tpl}) + '\n')
 
-            # --- Generar y escribir N variantes explícitas ---
+            # --- EXPLICIT (con valores) ---
             for _ in range(NUM_EXPLICIT_VARIANTS):
+                # Usamos la nueva función robusta
                 prompt_exp, completion_exp = fill_template(prompt_tpl, completion_tpl, vars_needed)
                 
-                # Formato Moderno
                 f_me.write(json.dumps({"text": format_for_model(prompt_exp, completion_exp, 'mistral')}) + '\n')
                 f_mm.write(json.dumps({"text": format_for_model(prompt_exp, completion_exp, 'mistral')}) + '\n')
                 f_pe.write(json.dumps({"text": format_for_model(prompt_exp, completion_exp, 'phi3')}) + '\n')
                 f_pm.write(json.dumps({"text": format_for_model(prompt_exp, completion_exp, 'phi3')}) + '\n')
-
-                # Formato Legacy
                 f_ple.write(json.dumps({"prompt": prompt_exp, "completion": completion_exp}) + '\n')
                 f_plm.write(json.dumps({"prompt": prompt_exp, "completion": completion_exp}) + '\n')
 
